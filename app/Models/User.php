@@ -1,0 +1,125 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+
+class User extends Authenticatable
+{
+    use HasFactory, Notifiable, SoftDeletes;
+
+    protected $fillable = [
+        'username',
+        'email',
+        'password',
+        'role',
+        'status',
+        'profile_picture',
+        'must_change_password',
+        'last_login_at',
+        'email_verified_at',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'last_login_at' => 'datetime',
+            'password' => 'hashed',
+            'must_change_password' => 'boolean',
+        ];
+    }
+
+    // Relationships
+    public function admin()
+    {
+        return $this->hasOne(Admin::class);
+    }
+
+    public function instructor()
+    {
+        return $this->hasOne(Instructor::class);
+    }
+
+    public function student()
+    {
+        return $this->hasOne(Student::class);
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
+    public function auditLogs()
+    {
+        return $this->hasMany(AuditLog::class);
+    }
+
+    public function feedback()
+    {
+        return $this->hasMany(Feedback::class);
+    }
+
+    public function aiJobs()
+    {
+        return $this->hasMany(AIJob::class);
+    }
+
+    // Helper Methods
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    public function isInstructor(): bool
+    {
+        return $this->role === 'instructor';
+    }
+
+    public function isStudent(): bool
+    {
+        return $this->role === 'student';
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    public function getFullNameAttribute(): string
+    {
+        if ($this->isAdmin() && $this->admin) {
+            return trim($this->admin->first_name . ' ' . $this->admin->last_name);
+        }
+        if ($this->isInstructor() && $this->instructor) {
+            return trim($this->instructor->first_name . ' ' . $this->instructor->last_name);
+        }
+        if ($this->isStudent() && $this->student) {
+            return trim($this->student->first_name . ' ' . $this->student->last_name);
+        }
+        return $this->username;
+    }
+
+    public function getProfileAttribute()
+    {
+        if ($this->isAdmin()) {
+            return $this->admin;
+        }
+        if ($this->isInstructor()) {
+            return $this->instructor;
+        }
+        if ($this->isStudent()) {
+            return $this->student;
+        }
+        return null;
+    }
+}
