@@ -1,29 +1,32 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @section('title', 'Admin Dashboard')
 
-@section('page-header', 'Dashboard')
-
-@section('page-actions')
-    <a href="{{ route('admin.users.create') }}" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
-        <i class="fas fa-plus fa-sm text-white-50"></i> Add New User
-    </a>
-@endsection
-
 @section('content')
+<!-- Page Heading -->
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
+    <div class="quick-actions">
+        <a href="{{ route('admin.users.create') }}" class="btn btn-sm btn-primary shadow-sm">
+            <i class="fas fa-user-plus fa-sm text-white-50"></i> Add User
+        </a>
+        <a href="{{ route('admin.enrollments.create') }}" class="btn btn-sm btn-success shadow-sm">
+            <i class="fas fa-user-graduate fa-sm text-white-50"></i> Enroll Student
+        </a>
+    </div>
+</div>
 
-<!-- Content Row - Statistics Cards -->
+<!-- Content Row - User Statistics -->
 <div class="row">
-
     <!-- Total Users Card -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-primary shadow h-100 py-2 card-stats">
+        <div class="card border-left-primary shadow h-100 py-2">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
                             Total Users</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $totalUsers ?? 0 }}</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $totalUsers }}</div>
                     </div>
                     <div class="col-auto">
                         <i class="fas fa-users fa-2x text-gray-300"></i>
@@ -33,15 +36,33 @@
         </div>
     </div>
 
-    <!-- Active Instructors Card -->
+    <!-- Active Users Card -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-success shadow h-100 py-2 card-stats">
+        <div class="card border-left-success shadow h-100 py-2">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                            Active Instructors</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $activeInstructors ?? 0 }}</div>
+                            Active Users</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $activeUsers }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-user-check fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instructors Card -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Instructors</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $instructorCount }}</div>
                     </div>
                     <div class="col-auto">
                         <i class="fas fa-chalkboard-teacher fa-2x text-gray-300"></i>
@@ -51,15 +72,15 @@
         </div>
     </div>
 
-    <!-- Enrolled Students Card -->
+    <!-- Students Card -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-info shadow h-100 py-2 card-stats">
+        <div class="card border-left-warning shadow h-100 py-2">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                            Enrolled Students</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $enrolledStudents ?? 0 }}</div>
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Students</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $studentCount }}</div>
                     </div>
                     <div class="col-auto">
                         <i class="fas fa-user-graduate fa-2x text-gray-300"></i>
@@ -68,16 +89,20 @@
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Active Courses Card -->
+<!-- Content Row - Academic Statistics -->
+<div class="row">
+    <!-- Courses Card -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-warning shadow h-100 py-2 card-stats">
+        <div class="card border-left-primary shadow h-100 py-2">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                            Active Courses</div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $activeCourses ?? 0 }}</div>
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Courses</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $totalCourses }}</div>
+                        <div class="text-xs text-muted">{{ $activeCourses }} active</div>
                     </div>
                     <div class="col-auto">
                         <i class="fas fa-book fa-2x text-gray-300"></i>
@@ -87,184 +112,237 @@
         </div>
     </div>
 
-</div>
-
-<!-- Content Row - Charts and Tables -->
-<div class="row">
-
-    <!-- Quick Actions Card -->
-    <div class="col-lg-6 mb-4">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
-            </div>
+    <!-- Subjects Card -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
             <div class="card-body">
-                <div class="list-group list-group-flush">
-                    <a href="{{ route('admin.users.create') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-user-plus text-primary"></i> Add New User
-                    </a>
-                    <a href="{{ route('admin.courses.create') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-plus-circle text-success"></i> Create Course
-                    </a>
-                    <a href="{{ route('admin.subjects.create') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-book-open text-info"></i> Add Subject
-                    </a>
-                    <a href="{{ route('admin.sections.create') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-users-class text-warning"></i> Create Section
-                    </a>
-                    <a href="{{ route('admin.enrollments.create') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-user-check text-danger"></i> Enroll Student
-                    </a>
-                    <a href="{{ route('admin.assignments.create') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-chalkboard-teacher text-secondary"></i> Assign Instructor
-                    </a>
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Subjects</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $totalSubjects }}</div>
+                        <div class="text-xs text-muted">{{ $activeSubjects }} active</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-book-open fa-2x text-gray-300"></i>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Recent Activity Card -->
-    <div class="col-lg-6 mb-4">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Recent Activity</h6>
-            </div>
+    <!-- Sections Card -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
             <div class="card-body">
-                <div class="list-group list-group-flush">
-                    @forelse($recentActivities ?? [] as $activity)
-                    <div class="list-group-item">
-                        <div class="d-flex w-100 justify-content-between">
-                            <h6 class="mb-1">{{ $activity->action }}</h6>
-                            <small>{{ $activity->created_at->diffForHumans() }}</small>
-                        </div>
-                        <p class="mb-1">{{ $activity->user->full_name ?? 'System' }}</p>
-                        <small class="text-muted">{{ $activity->model_type }}</small>
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Sections</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $totalSections }}</div>
+                        <div class="text-xs text-muted">{{ $activeSections }} active</div>
                     </div>
-                    @empty
-                    <div class="text-center py-4">
-                        <i class="fas fa-inbox fa-3x text-gray-300 mb-3"></i>
-                        <p class="text-muted">No recent activities</p>
+                    <div class="col-auto">
+                        <i class="fas fa-chalkboard fa-2x text-gray-300"></i>
                     </div>
-                    @endforelse
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Enrollments Card -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Enrollments ({{ $currentSemester }})</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $activeEnrollments }}</div>
+                        <div class="text-xs text-muted">{{ $currentAcademicYear }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- Content Row - Additional Info -->
+<!-- Content Row - Content & Quiz Statistics -->
 <div class="row">
+    <!-- Lessons Card -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Lessons</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $totalLessons }}</div>
+                        <div class="text-xs text-muted">{{ $publishedLessons }} published</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-file-alt fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <!-- Pending Feedback Card -->
-    <div class="col-lg-4 mb-4">
-        <div class="card shadow h-100">
+    <!-- Quizzes Card -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Quizzes</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $totalQuizzes }}</div>
+                        <div class="text-xs text-muted">{{ $publishedQuizzes }} published</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clipboard-check fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quiz Attempts Card -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Quiz Attempts</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $completedAttempts }}</div>
+                        <div class="text-xs text-muted">{{ $inProgressAttempts }} in progress</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-tasks fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Average Score Card -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Average Score</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ number_format($averageScore, 2) }}%</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Content Row - Tables -->
+<div class="row">
+    <!-- Recent Activities -->
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow mb-4">
             <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                <h6 class="m-0 font-weight-bold text-primary">Pending Feedback</h6>
-                <span class="badge badge-danger badge-pill">{{ $pendingFeedback ?? 0 }}</span>
+                <h6 class="m-0 font-weight-bold text-primary">Recent Activities</h6>
+                <a href="{{ route('admin.audit-logs.index') }}" class="btn btn-sm btn-primary">View All</a>
             </div>
             <div class="card-body">
-                <p class="mb-3">You have {{ $pendingFeedback ?? 0 }} feedback items awaiting response.</p>
-                <a href="{{ route('admin.feedback.index') }}" class="btn btn-primary btn-sm btn-block">
-                    View All Feedback
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- System Status Card -->
-    <div class="col-lg-4 mb-4">
-        <div class="card shadow h-100">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">System Status</h6>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <small class="font-weight-bold">Database</small>
-                    <div class="progress">
-                        <div class="progress-bar bg-success" role="progressbar" style="width: 100%"></div>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <small class="font-weight-bold">Storage</small>
-                    <div class="progress">
-                        <div class="progress-bar bg-info" role="progressbar" style="width: 45%"></div>
-                    </div>
-                </div>
-                <div>
-                    <small class="font-weight-bold">Server</small>
-                    <div class="progress">
-                        <div class="progress-bar bg-warning" role="progressbar" style="width: 65%"></div>
-                    </div>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Action</th>
+                                <th>Model</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($recentActivities as $log)
+                            <tr>
+                                <td>{{ $log->user ? $log->user->username : 'System' }}</td>
+                                <td>
+                                    <span class="badge badge-primary">{{ $log->action }}</span>
+                                </td>
+                                <td>{{ $log->model_type ? class_basename($log->model_type) : '-' }}</td>
+                                <td>{{ $log->created_at->diffForHumans() }}</td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-3">No recent activities</td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- User Statistics Card -->
-    <div class="col-lg-4 mb-4">
-        <div class="card shadow h-100">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">User Statistics</h6>
+    <!-- Recent Users -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Recent Users</h6>
+                <a href="{{ route('admin.users.index') }}" class="btn btn-sm btn-primary">View All</a>
             </div>
             <div class="card-body">
-                <div class="mb-2">
-                    <div class="d-flex justify-content-between">
-                        <span>Admins:</span>
-                        <strong>{{ $adminCount ?? 0 }}</strong>
+                @forelse($recentUsers as $user)
+                <div class="d-flex align-items-center mb-3">
+                    @if($user->profile_picture)
+                        <img src="{{ asset('storage/' . $user->profile_picture) }}" class="avatar mr-3" alt="Avatar">
+                    @else
+                        <img src="{{ asset('img/undraw_profile.svg') }}" class="avatar mr-3" alt="Avatar">
+                    @endif
+                    <div class="flex-grow-1">
+                        <div class="font-weight-bold">{{ $user->full_name }}</div>
+                        <div class="text-xs text-muted">{{ $user->email }}</div>
                     </div>
+                    <span class="badge badge-{{ $user->role === 'admin' ? 'primary' : ($user->role === 'instructor' ? 'success' : 'info') }}">
+                        {{ ucfirst($user->role) }}
+                    </span>
                 </div>
-                <div class="mb-2">
-                    <div class="d-flex justify-content-between">
-                        <span>Instructors:</span>
-                        <strong>{{ $instructorCount ?? 0 }}</strong>
-                    </div>
-                </div>
-                <div class="mb-2">
-                    <div class="d-flex justify-content-between">
-                        <span>Students:</span>
-                        <strong>{{ $studentCount ?? 0 }}</strong>
-                    </div>
-                </div>
-                <hr>
-                <div>
-                    <div class="d-flex justify-content-between">
-                        <span>Active:</span>
-                        <strong class="text-success">{{ $activeUsersCount ?? 0 }}</strong>
-                    </div>
-                </div>
-                <div>
-                    <div class="d-flex justify-content-between">
-                        <span>Inactive:</span>
-                        <strong class="text-warning">{{ $inactiveUsersCount ?? 0 }}</strong>
-                    </div>
-                </div>
+                @empty
+                <p class="text-center text-muted">No recent users</p>
+                @endforelse
             </div>
         </div>
     </div>
-
 </div>
 
+<!-- Content Row - Pending Feedback -->
+@if($pendingFeedback > 0)
+<div class="row">
+    <div class="col-12">
+        <div class="alert alert-warning" role="alert">
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            You have <strong>{{ $pendingFeedback }}</strong> pending feedback to review.
+            <a href="{{ route('admin.feedback.index') }}" class="alert-link">View Feedback</a>
+        </div>
+    </div>
+</div>
+@endif
 @endsection
 
 @push('scripts')
-<!-- Chart.js (LOCAL) -->
-<script src="{{ asset('vendor/chart.js/Chart.min.js') }}"></script>
-
 <script>
-// Example Chart - You can add actual data from controller
-// var ctx = document.getElementById("myChart");
-// var myChart = new Chart(ctx, {
-//     type: 'line',
-//     data: {
-//         labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-//         datasets: [{
-//             label: "Users",
-//             data: [10, 20, 30, 40, 50, 60],
-//             backgroundColor: 'rgba(78, 115, 223, 0.05)',
-//             borderColor: 'rgba(78, 115, 223, 1)',
-//         }]
-//     }
-// });
+    // Additional dashboard scripts if needed
+    $(document).ready(function() {
+        // Refresh stats every 5 minutes
+        setInterval(function() {
+            // You can implement auto-refresh logic here
+        }, 300000);
+    });
 </script>
 @endpush

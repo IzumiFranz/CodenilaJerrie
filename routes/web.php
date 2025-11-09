@@ -211,6 +211,8 @@ Route::middleware(['auth', 'role:instructor', 'password.change'])
         ->name('question-bank.analytics');
     
     // Quiz Management
+    Route::resource('quiz-templates', QuizTemplateController::class)
+    ->only(['index', 'create', 'store', 'destroy']);
     Route::resource('quizzes', QuizController::class);
     Route::post('quizzes/{quiz}/toggle-publish', [QuizController::class, 'togglePublish'])
         ->name('quizzes.toggle-publish');
@@ -273,7 +275,9 @@ Route::middleware(['auth', 'role:student', 'password.change'])
         ->name('quiz-attempts.results');
     Route::get('quiz-attempts/{attempt}/review', [QuizAttemptController::class, 'review'])
         ->name('quiz-attempts.review');
-    
+        Route::get('quiz-attempts/{attempt}/export-pdf', [QuizAttemptController::class, 'exportPdf'])
+        ->name('quiz-attempts.export-pdf');
+
     // Feedback
     Route::get('feedback', [FeedbackController::class, 'index'])->name('feedback.index');
     Route::get('feedback/create', [FeedbackController::class, 'create'])->name('feedback.create');

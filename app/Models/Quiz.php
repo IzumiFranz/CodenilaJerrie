@@ -43,6 +43,7 @@ class Quiz extends Model
             'available_from' => 'datetime',
             'available_until' => 'datetime',
             'published_at' => 'datetime',
+            'publish_at' => 'datetime',
         ];
     }
 
@@ -68,6 +69,42 @@ class Quiz extends Model
     public function attempts()
     {
         return $this->hasMany(QuizAttempt::class);
+    }
+
+    public function template()
+    {
+        return $this->belongsTo(QuizTemplate::class, 'template_id');
+    }
+
+    // Helpers
+    public function getAverageDifficulty()
+    {
+        $difficulties = ['easy' => 1, 'medium' => 2, 'hard' => 3];
+        $avg = $this->questions->avg(function($q) use ($difficulties) {
+            return $difficulties[$q->difficulty] ?? 2;
+        });
+        
+        if ($avg <= 1.5) return 'easy';
+        if ($avg >= 2.5) return 'hard';
+        return 'medium';
+    }
+
+    public function calculateDifficultyLevel()
+    {
+        $this->difficulty_level = $this->getAverageDifficulty();
+        $this->save();
+    }
+
+    public function isPracticeMode($attemptId = null)
+    {
+        if (!$this->allow_practice_mode) return false;
+        
+        if ($attemptId) {
+            $attempt = $this->attempts()->find($attemptId);
+            return $attempt && $attempt->is_practice;
+        }
+        
+        return false;
     }
 
     // Helper Methods

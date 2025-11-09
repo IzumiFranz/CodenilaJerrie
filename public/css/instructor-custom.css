@@ -1,0 +1,36 @@
+/* Question choices styling */
+.choice-input {
+    transition: all 0.3s ease;
+}
+
+.choice-input:hover {
+    background-color: #f8f9fa;
+}
+
+/* Quiz questions sortable */
+.ui-sortable-helper {
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+
+/* Statistics cards */
+.stat-card {
+    border-left: 4px solid #1cc88a;
+}
+
+/* Loading spinner */
+.loading-spinner {
+    display: none;
+    text-align: center;
+    padding: 20px;
+}
+
+.loading-spinner.active {
+    display: block;
+}
+
+/* File upload preview */
+.file-preview {
+    max-width: 200px;
+    margin-top: 10px;
+}

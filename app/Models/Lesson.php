@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class Lesson extends Model
 {
@@ -23,12 +24,13 @@ class Lesson extends Model
         'published_at',
         'view_count',
     ];
-
+    
     protected function casts(): array
     {
         return [
             'is_published' => 'boolean',
             'published_at' => 'datetime',
+            'publish_at' => 'datetime',
             'order' => 'integer',
             'view_count' => 'integer',
         ];
@@ -53,10 +55,58 @@ class Lesson extends Model
         $this->save();
     }
 
-    public function incrementViewCount(): void
+    public function views()
     {
-        $this->increment('view_count');
+        return $this->hasMany(LessonView::class);
     }
+
+    public function prerequisite()
+    {
+        return $this->belongsTo(Lesson::class, 'prerequisite_lesson_id');
+    }
+
+    public function attachments()
+    {
+        return $this->hasMany(LessonAttachment::class);
+    }
+
+    // Helpers
+    public function getReadTimeAttribute()
+    {
+        if ($this->word_count > 0) {
+            return ceil($this->word_count / 200); // 200 words per minute
+        }
+        return 0;
+    }
+
+    public function calculateWordCount()
+    {
+        $text = strip_tags($this->content);
+        $this->word_count = str_word_count($text);
+        $this->save();
+    }
+
+    public function incrementViewCount()
+    {
+    $this->increment('view_count');
+}
+
+public function isViewedBy($studentId)
+{
+    return $this->views()->where('student_id', $studentId)->exists();
+}
+
+public function getViewPercentage($sectionId)
+{
+    $totalStudents = \App\Models\Enrollment::where('section_id', $sectionId)
+        ->where('status', 'enrolled')
+        ->count();
+    
+    if ($totalStudents == 0) return 0;
+    
+    $viewedCount = $this->views()->count();
+    return round(($viewedCount / $totalStudents) * 100, 1);
+}
 
     public function getFileUrlAttribute(): ?string
     {
