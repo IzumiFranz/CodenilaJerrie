@@ -10,6 +10,7 @@ use App\Models\Student;
 use App\Models\Course;
 use App\Models\Specialization;
 use App\Models\AuditLog;
+use App\Mail\WelcomeMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -157,17 +158,18 @@ class UserController extends Controller
                     break;
             }
 
+
+            DB::commit();
+
             // Log the creation
             AuditLog::log('user_created', $user, [], [
                 'role' => $user->role,
                 'email' => $user->email,
             ]);
 
-            DB::commit();
-
-            // TODO: Send email with credentials
-            // Mail::to($user->email)->send(new UserCreatedMail($user, $password));
-
+            // 🔔 SEND WELCOME EMAIL WITH CREDENTIALS
+            Mail::to($user->email)->queue(new WelcomeMail($user, $password));
+        
             return redirect()
                 ->route('admin.users.index')
                 ->with('success', "User created successfully. Username: {$username}, Password: {$password}");

@@ -28,7 +28,31 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        // Log the login
+        \App\Models\AuditLog::log(
+            'user_login',
+            auth()->user(),
+            [],
+            [
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent()
+            ]
+        );
+
+        // Update last login timestamp
+        auth()->user()->update([
+            'last_login_at' => now()
+        ]);
+
+        // Redirect based on role
+        $user = auth()->user();
+        
+        return match($user->role) {
+            'admin' => redirect()->intended(route('admin.dashboard')),
+            'instructor' => redirect()->intended(route('instructor.dashboard')),
+            'student' => redirect()->intended(route('student.dashboard')),
+            default => redirect()->intended('/'),
+        };
     }
 
     /**
@@ -36,12 +60,25 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        // Log the logout
+        if (auth()->check()) {
+            \App\Models\AuditLog::log(
+                'user_logout',
+                auth()->user(),
+                [],
+                [
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent()
+                ]
+            );
+        }
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
 
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        return redirect('/')->with('status', 'You have been logged out successfully.');
     }
 }

@@ -70,6 +70,12 @@ class QuestionBank extends Model
         return $this->hasMany(QuizAnswer::class, 'question_id');
     }
 
+    public function tags()
+    {
+        return $this->belongsToMany(QuestionTag::class, 'question_tag_pivot')
+            ->withTimestamps();
+    }
+
     // Helper Methods
     public function incrementUsage(): void
     {
@@ -121,4 +127,31 @@ class QuestionBank extends Model
             $this->save();
         }
     }
+
+    public function syncTags(array $tagIds): void
+    {
+        $oldTagIds = $this->tags->pluck('id')->toArray();
+        
+        $this->tags()->sync($tagIds);
+        
+        // Update question counts for all affected tags
+        $allTagIds = array_unique(array_merge($oldTagIds, $tagIds));
+        foreach ($allTagIds as $tagId) {
+            $tag = QuestionTag::find($tagId);
+            if ($tag) {
+                $tag->updateQuestionCount();
+            }
+        }
+    }
+
+    public function hasTag(string $slug): bool
+    {
+        return $this->tags()->where('slug', $slug)->exists();
+    }
+
+    public function getTagsAttribute(): string
+    {
+        return $this->tags->pluck('name')->join(', ');
+    }
+
 }

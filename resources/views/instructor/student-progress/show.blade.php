@@ -133,6 +133,75 @@
         </div>
     </div>
 </div>
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-success">Score Trend</h6>
+    </div>
+    <div class="card-body">
+        <canvas id="scoreTrendChart" height="100"></canvas>
+    </div>
+</div>
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const trendCtx = document.getElementById('scoreTrendChart').getContext('2d');
+
+@php
+    // Get recent attempts for trend
+    $recentTrend = $quizAttempts->sortBy('completed_at')->take(10);
+    $trendLabels = $recentTrend->map(function($a, $index) {
+        return 'Attempt ' . ($index + 1);
+    });
+    $trendScores = $recentTrend->pluck('percentage');
+@endphp
+
+new Chart(trendCtx, {
+    type: 'line',
+    data: {
+        labels: {!! json_encode($trendLabels) !!},
+        datasets: [{
+            label: 'Score (%)',
+            data: {!! json_encode($trendScores) !!},
+            borderColor: 'rgba(28, 200, 138, 1)',
+            backgroundColor: 'rgba(28, 200, 138, 0.1)',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 5,
+            pointHoverRadius: 7
+        }, {
+            label: 'Passing Score',
+            data: Array({{ $trendLabels->count() }}).fill(60),
+            borderColor: 'rgba(220, 53, 69, 0.5)',
+            borderDash: [5, 5],
+            borderWidth: 2,
+            pointRadius: 0,
+            fill: false
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                    callback: function(value) {
+                        return value + '%';
+                    }
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top'
+            }
+        }
+    }
+});
+</script>
+@endpush
 
 <!-- Strengths & Weaknesses -->
 <div class="row mb-4">

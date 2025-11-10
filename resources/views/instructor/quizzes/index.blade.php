@@ -72,6 +72,12 @@
                             <span class="badge badge-{{ $quiz->is_published ? 'success' : 'secondary' }}">
                                 {{ $quiz->is_published ? 'Published' : 'Draft' }}
                             </span>
+
+                            @if($lesson->isScheduledForPublish())
+                                <span class="badge badge-info ml-2" title="Scheduled for {{ $lesson->scheduled_publish_at->format('M d, Y h:i A') }}">
+                                    <i class="fas fa-clock"></i> Scheduled
+                                </span>
+                            @endif
                         </td>
                         <td>{{ $quiz->attempts_count }} attempts</td>
                         <td>{{ $quiz->time_limit }} min</td>
@@ -87,6 +93,13 @@
                                 <a href="{{ route('instructor.quizzes.questions', $quiz) }}" class="btn btn-primary" title="Manage Questions">
                                     <i class="fas fa-tasks"></i>
                                 </a>
+                                <button type="button" 
+                                        class="btn btn-sm btn-info" 
+                                        data-toggle="modal" 
+                                        data-target="#scheduleModal{{ $lesson->id }}"
+                                        title="Schedule Publish">
+                                    <i class="fas fa-clock"></i>
+                                </button>
                                 <form action="{{ route('instructor.quizzes.toggle-publish', $quiz) }}" method="POST" class="d-inline">
                                     @csrf
                                     <button type="submit" class="btn btn-{{ $quiz->is_published ? 'secondary' : 'success' }}" 

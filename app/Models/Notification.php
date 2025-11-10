@@ -34,6 +34,7 @@ class Notification extends Model
     // Helper Methods
     public function markAsRead(): void
     {
+        
         if (!$this->read_at) {
             $this->read_at = now();
             $this->save();

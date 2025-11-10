@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Feedback;
 use App\Models\AuditLog;
+use App\Mail\FeedbackResponseMail;
 use Illuminate\Http\Request;
 
 class FeedbackController extends Controller
@@ -51,8 +52,25 @@ class FeedbackController extends Controller
 
             AuditLog::log('feedback_responded', $feedback);
 
-            // TODO: Send email notification to user
-            // Mail::to($feedback->user->email)->send(new FeedbackResponseMail($feedback));
+            // 🔔 SEND RESPONSE EMAIL TO STUDENT
+            $settings = $feedback->user->settings ?? (object)[
+                'email_feedback_response' => true,
+                'notification_feedback_response' => true
+            ];
+            
+            if ($settings->email_feedback_response) {
+                Mail::to($feedback->user->email)->queue(new FeedbackResponseMail($feedback));
+            }
+            
+            if ($settings->notification_feedback_response) {
+                Notification::create([
+                    'user_id' => $feedback->user_id,
+                    'type' => 'info',
+                    'title' => 'Feedback Response Received',
+                    'message' => 'An administrator has responded to your feedback.',
+                    'action_url' => route('student.feedback.show', $feedback),
+                ]);
+            }
 
             return back()->with('success', 'Response sent successfully.');
         } catch (\Exception $e) {

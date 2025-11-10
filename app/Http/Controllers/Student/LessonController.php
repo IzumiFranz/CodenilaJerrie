@@ -7,7 +7,9 @@ use App\Models\Lesson;
 use App\Models\Subject;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
+use App\Models\LessonAttachment;
 use Illuminate\Support\Facades\Storage;
+use ZipArchive;
 
 class LessonController extends Controller
 {
@@ -120,5 +122,291 @@ class LessonController extends Controller
         if ($month >= 6 && $month <= 10) return '1st';
         if ($month >= 11 || $month <= 3) return '2nd';
         return 'summer';
+    }
+    public function trackView(Request $request, Lesson $lesson)
+    {
+        $student = auth()->user()->student;
+        
+        // Verify student has access to this lesson
+        $hasAccess = $this->studentHasAccessToLesson($student, $lesson);
+        
+        if (!$hasAccess) {
+            return response()->json(['error' => 'Access denied'], 403);
+        }
+        
+        try {
+            $view = LessonView::recordView($lesson, $student);
+            
+            // Increment lesson view count
+            $lesson->incrementViewCount();
+            
+            return response()->json([
+                'success' => true,
+                'view_id' => $view->id,
+                'message' => 'View tracked successfully'
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to track view'], 500);
+        }
+    }
+    public function updateDuration(Request $request, Lesson $lesson)
+    {
+        $validated = $request->validate([
+            'duration' => ['required', 'integer', 'min:0'],
+            'view_id' => ['nullable', 'exists:lesson_views,id'],
+        ]);
+        
+        $student = auth()->user()->student;
+        
+        try {
+            // Find or create the view record
+            if (isset($validated['view_id'])) {
+                $view = LessonView::findOrFail($validated['view_id']);
+            } else {
+                $view = LessonView::where('lesson_id', $lesson->id)
+                    ->where('student_id', $student->id)
+                    ->orderBy('viewed_at', 'desc')
+                    ->first();
+                    
+                if (!$view) {
+                    $view = LessonView::recordView($lesson, $student);
+                }
+            }
+            
+            // Update duration
+            $view->duration_seconds = $validated['duration'];
+            $view->save();
+            
+            return response()->json([
+                'success' => true,
+                'duration' => $view->getDurationFormatted()
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to update duration'], 500);
+        }
+    }
+    public function markCompleted(Request $request, Lesson $lesson)
+    {
+        $student = auth()->user()->student;
+        
+        try {
+            $view = LessonView::where('lesson_id', $lesson->id)
+                ->where('student_id', $student->id)
+                ->orderBy('viewed_at', 'desc')
+                ->first();
+                
+            if (!$view) {
+                $view = LessonView::recordView($lesson, $student);
+            }
+            
+            $view->markCompleted();
+            
+            AuditLog::log('lesson_completed', $lesson);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Lesson marked as completed',
+                'completed_at' => $view->completed_at->format('M d, Y h:i A')
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to mark as completed'], 500);
+        }
+    }
+
+    public function statistics(Lesson $lesson)
+    {
+        $this->authorize('view', $lesson);
+        
+        $stats = $lesson->getViewStats();
+        
+        // Get detailed view data
+        $views = LessonView::where('lesson_id', $lesson->id)
+            ->with('student.user')
+            ->orderBy('viewed_at', 'desc')
+            ->paginate(20);
+        
+        // Get top viewers
+        $topViewers = LessonView::where('lesson_id', $lesson->id)
+            ->select('student_id', DB::raw('COUNT(*) as view_count'), DB::raw('SUM(duration_seconds) as total_time'))
+            ->groupBy('student_id')
+            ->orderBy('view_count', 'desc')
+            ->limit(10)
+            ->with('student.user')
+            ->get();
+        
+        return view('instructor.lessons.statistics', compact('lesson', 'stats', 'views', 'topViewers'));
+    }
+
+    // Helper method
+    private function studentHasAccessToLesson(Student $student, Lesson $lesson): bool
+    {
+        if (!$lesson->is_published) {
+            return false;
+        }
+        
+        // Check if student is enrolled in a section where this subject is taught
+        $currentAcademicYear = now()->format('Y') . '-' . (now()->year + 1);
+        $currentSemester = $this->getCurrentSemester();
+        
+        return $student->enrollments()
+            ->where('academic_year', $currentAcademicYear)
+            ->where('semester', $currentSemester)
+            ->where('status', 'enrolled')
+            ->whereHas('section.assignments', function($q) use ($lesson) {
+                $q->where('subject_id', $lesson->subject_id);
+            })
+            ->exists();
+    }
+    /**
+     * Download an attachment.
+     */
+    public function downloadAttachment(Lesson $lesson, LessonAttachment $attachment)
+    {
+        // Check if student is enrolled
+        $enrollment = $lesson->subject->enrollments()
+            ->where('student_id', auth()->id())
+            ->first();
+
+        if (!$enrollment) {
+            abort(403, 'You are not enrolled in this subject.');
+        }
+
+        // Check if attachment belongs to this lesson
+        if ($attachment->lesson_id !== $lesson->id) {
+            abort(404);
+        }
+
+        // Check if attachment is visible
+        if (!$attachment->is_visible) {
+            abort(403, 'This attachment is not available.');
+        }
+
+        try {
+            // Record download
+            $attachment->recordDownload(auth()->id());
+
+            // Audit log
+            activity()
+                ->performedOn($attachment)
+                ->causedBy(auth()->user())
+                ->withProperties([
+                    'lesson_id' => $lesson->id,
+                    'filename' => $attachment->original_filename,
+                ])
+                ->log('Downloaded lesson attachment');
+
+            // Return file download
+            return Storage::download($attachment->file_path, $attachment->original_filename);
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Download failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * View attachment (for images/PDFs in browser).
+     */
+    public function viewAttachment(Lesson $lesson, LessonAttachment $attachment)
+    {
+        // Check if student is enrolled
+        $enrollment = $lesson->subject->enrollments()
+            ->where('student_id', auth()->id())
+            ->first();
+
+        if (!$enrollment) {
+            abort(403, 'You are not enrolled in this subject.');
+        }
+
+        // Check if attachment belongs to this lesson
+        if ($attachment->lesson_id !== $lesson->id) {
+            abort(404);
+        }
+
+        // Check if attachment is visible
+        if (!$attachment->is_visible) {
+            abort(403, 'This attachment is not available.');
+        }
+
+        // Only allow viewing of certain file types
+        if (!in_array($attachment->file_extension, ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+            return $this->downloadAttachment($lesson, $attachment);
+        }
+
+        try {
+            // Record as download
+            $attachment->recordDownload(auth()->id());
+
+            // Return file for viewing
+            return Storage::response($attachment->file_path);
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'View failed: ' . $e->getMessage());
+        }
+    }
+    public function downloadAllAttachments(Lesson $lesson)
+    {
+        // Check if student is enrolled
+        $enrollment = $lesson->subject->enrollments()
+            ->where('student_id', auth()->id())
+            ->first();
+
+        if (!$enrollment) {
+            abort(403, 'You are not enrolled in this subject.');
+        }
+
+        $attachments = $lesson->visibleAttachments;
+
+        if ($attachments->isEmpty()) {
+            return back()->with('error', 'No attachments available.');
+        }
+
+        try {
+            // Create temporary ZIP file
+            $zipFileName = 'lesson-' . $lesson->id . '-attachments-' . time() . '.zip';
+            $zipPath = storage_path('app/temp/' . $zipFileName);
+            
+            // Ensure temp directory exists
+            if (!file_exists(storage_path('app/temp'))) {
+                mkdir(storage_path('app/temp'), 0755, true);
+            }
+
+            $zip = new ZipArchive();
+            
+            if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== TRUE) {
+                throw new \Exception('Could not create ZIP file.');
+            }
+
+            // Add each attachment to ZIP
+            foreach ($attachments as $attachment) {
+                $filePath = storage_path('app/public/' . $attachment->file_path);
+                
+                if (file_exists($filePath)) {
+                    $zip->addFile($filePath, $attachment->original_filename);
+                    
+                    // Record download
+                    $attachment->recordDownload(auth()->id());
+                }
+            }
+
+            $zip->close();
+
+            // Audit log
+            activity()
+                ->performedOn($lesson)
+                ->causedBy(auth()->user())
+                ->withProperties([
+                    'count' => $attachments->count(),
+                ])
+                ->log('Downloaded all lesson attachments as ZIP');
+
+            // Return ZIP file and delete after send
+            return response()->download($zipPath, 'lesson-attachments.zip')->deleteFileAfterSend(true);
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Download failed: ' . $e->getMessage());
+        }
     }
 }

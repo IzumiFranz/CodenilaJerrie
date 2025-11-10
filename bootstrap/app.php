@@ -9,6 +9,7 @@ use App\Http\Middleware\PasswordMiddleware;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
@@ -24,6 +25,12 @@ return Application::configure(basePath: dirname(__DIR__))
             // Add any global web middleware here if needed
         ]);
 
+        $middleware->group('api', [
+            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            'throttle:api',
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+        ]);
+        
         // Apply middleware to API routes
         $middleware->api(prepend: [
             // Add any global API middleware here if needed

@@ -249,16 +249,18 @@
                 </h6>
             </div>
             <div class="card-body">
-                @if($attempt->quiz->show_answers)
-                <a href="{{ route('student.quiz-attempts.review', $attempt) }}" 
-                   class="btn btn-info btn-block mb-2">
-                    <i class="fas fa-eye mr-2"></i>Review Answers
-                </a>
-                <a href="{{ route('student.quiz-attempts.export-pdf', $attempt) }}" 
-                   class="btn btn-primary btn-block mb-2">
-                    <i class="fas fa-file-pdf mr-2"></i>Download PDF Report
-                </a>
+            @if($quiz->allow_review)
+                @if($quiz->canReview($attempt))
+                    <a href="{{ route('student.quiz-attempts.review', [$quiz, $attempt]) }}" 
+                    class="btn btn-info btn-lg">
+                        <i class="fas fa-clipboard-check"></i> Review Answers
+                    </a>
+                @else
+                    <button class="btn btn-secondary btn-lg" disabled title="Review not yet available">
+                        <i class="fas fa-clock"></i> Review Available in {{ $quiz->review_available_after }} minutes
+                    </button>
                 @endif
+            @endif
 
                 @if($attempt->quiz->studentCanTakeQuiz(auth()->user()->student))
                 <a href="{{ route('student.quizzes.show', $attempt->quiz) }}" 
@@ -275,6 +277,10 @@
                 <button type="button" class="btn btn-outline-primary btn-block" onclick="window.print()">
                     <i class="fas fa-print mr-2"></i>Print Results
                 </button>
+                <a href="{{ route('student.quiz-attempts.export-pdf', $attempt) }}" 
+                   class="btn btn-danger btn-block mb-2">
+                    <i class="fas fa-file-pdf mr-2"></i>Download PDF Report
+                </a>
             </div>
         </div>
 

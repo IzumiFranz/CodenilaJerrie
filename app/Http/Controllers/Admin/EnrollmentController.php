@@ -8,6 +8,7 @@ use App\Models\Student;
 use App\Models\Section;
 use App\Models\Course;
 use App\Models\AuditLog;
+use App\Mail\EnrollmentConfirmationMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -97,8 +98,25 @@ class EnrollmentController extends Controller
 
             AuditLog::log('enrollment_created', $enrollment);
 
-            // TODO: Send enrollment confirmation email
-            // Mail::to($enrollment->student->user->email)->send(new EnrollmentConfirmationMail($enrollment));
+            // 🔔 SEND ENROLLMENT CONFIRMATION EMAIL
+            $settings = $enrollment->student->user->settings ?? (object)[
+                'email_enrollment' => true,
+                'notification_enrollment' => true
+            ];
+            
+            if ($settings->email_enrollment) {
+                Mail::to($enrollment->student->user->email)->queue(new EnrollmentConfirmationMail($enrollment));
+            }
+            
+            if ($settings->notification_enrollment) {
+                Notification::create([
+                    'user_id' => $enrollment->student->user_id,
+                    'type' => 'success',
+                    'title' => 'Enrollment Confirmed',  
+                    'message' => "You have been enrolled in {$enrollment->section->full_name}.",
+                    'action_url' => route('student.dashboard'),
+                ]);
+            }
 
             return redirect()
                 ->route('admin.enrollments.index')

@@ -9,8 +9,10 @@ use App\Models\QuizAttempt;
 use App\Models\QuestionBank;
 use App\Models\InstructorSubjectSection;
 use App\Models\Enrollment;
+use App\Models\Student;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class InstructorDashboardController extends Controller
 {
@@ -19,7 +21,10 @@ class InstructorDashboardController extends Controller
         $instructor = auth()->user()->instructor;
 
         // Get current academic year and semester
-        $currentAcademicYear = now()->format('Y') . '-' . (now()->year + 1);
+        $year = now()->year;
+        $month = now()->month;
+        $currentAcademicYear = ($month >= 6) ? "{$year}-" . ($year + 1) : ($year - 1) . "-{$year}";
+
         $currentSemester = $this->getCurrentSemester();
 
         // Content Statistics
@@ -71,9 +76,7 @@ class InstructorDashboardController extends Controller
             ->avg('percentage') ?? 0;
 
             // FEATURE 1: Quick Stats
-        $classAverage = QuizAttempt::whereIn('quiz_id', $quizIds)
-            ->where('status', 'completed')
-            ->avg('percentage') ?? 0;
+        $classAverage = $averageScore;
 
         $hardestQuiz = Quiz::where('instructor_id', $instructor->id)
             ->withAvg(['attempts as avg_score' => fn($q) => $q->where('status', 'completed')], 'percentage')
@@ -84,18 +87,16 @@ class InstructorDashboardController extends Controller
             ->orderBy('view_count', 'desc')
             ->first();
 
-        $strugglingStudents = Student::whereHas('enrollments', function($q) use ($assignments) {
-            $q->whereIn('section_id', $assignments->pluck('section_id'));
+        $strugglingStudents = Student::whereHas('enrollments', function ($q) use ($assignments) {
+             $q->whereIn('section_id', $assignments->pluck('section_id'));
         })
-        ->whereHas('quizAttempts', function($q) use ($quizIds) {
-            $q->whereIn('quiz_id', $quizIds)
-            ->where('status', 'completed')
-            ->havingRaw('AVG(percentage) < 50');
-        })
-        ->withAvg('quizAttempts as avg_score', 'percentage')
-        ->having('avg_score', '<', 50)
-        ->limit(5)
-        ->get();
+            ->withAvg(['quizAttempts as avg_score' => function ($q) use ($quizIds) {
+                $q->whereIn('quiz_id', $quizIds)->where('status', 'completed');
+            }], 'percentage')
+            ->having('avg_score', '<', 50)
+            ->orderBy('avg_score', 'asc')
+            ->limit(5)
+            ->get();
 
 
         // Recent Lessons

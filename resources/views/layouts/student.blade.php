@@ -77,6 +77,43 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.7; }
         }
+
+        .icon-circle {
+            height: 2.5rem;
+            width: 2.5rem;
+            border-radius: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dropdown-list {
+            position: relative;
+        }
+
+        .dropdown-list .dropdown-item {
+            white-space: normal;
+            padding: 1rem;
+            border-bottom: 1px solid #e3e6f0;
+            transition: all 0.3s;
+        }
+
+        .dropdown-list .dropdown-item:hover {
+            background-color: #f8f9fc !important;
+        }
+
+        .dropdown-list .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .badge-counter {
+            position: absolute;
+            transform: scale(0.7);
+            transform-origin: top right;
+            right: 0.25rem;
+            margin-top: -0.25rem;
+        }
+
     </style>
 
     @stack('styles')
@@ -87,13 +124,14 @@
     <!-- Page Wrapper -->
     <div id="wrapper">
         <!-- Sidebar -->
-        <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+        <ul class="navbar-nav bg-gradient-info sidebar sidebar-dark accordion" id="accordionSidebar">
+
             <!-- Sidebar - Brand -->
             <a class="sidebar-brand d-flex align-items-center justify-content-center" href="{{ route('student.dashboard') }}">
                 <div class="sidebar-brand-icon rotate-n-15">
-                    <i class="fas fa-user-graduate"></i>
+                    <i class="fas fa-graduation-cap"></i>
                 </div>
-                <div class="sidebar-brand-text mx-3">Student Portal</div>
+                <div class="sidebar-brand-text mx-3">Quiz LMS</div>
             </a>
 
             <!-- Divider -->
@@ -111,12 +149,14 @@
             <hr class="sidebar-divider">
 
             <!-- Heading -->
-            <div class="sidebar-heading">Learning</div>
+            <div class="sidebar-heading">
+                Learning
+            </div>
 
             <!-- Nav Item - Lessons -->
             <li class="nav-item {{ request()->routeIs('student.lessons.*') ? 'active' : '' }}">
                 <a class="nav-link" href="{{ route('student.lessons.index') }}">
-                    <i class="fas fa-fw fa-book-open"></i>
+                    <i class="fas fa-fw fa-book"></i>
                     <span>Lessons</span>
                 </a>
             </li>
@@ -133,13 +173,50 @@
             <hr class="sidebar-divider">
 
             <!-- Heading -->
-            <div class="sidebar-heading">Support</div>
+            <div class="sidebar-heading">
+                Performance
+            </div>
+
+            <!-- 🆕 Nav Item - Progress & Grades (NEW!) -->
+            <li class="nav-item {{ request()->routeIs('student.progress.*') ? 'active' : '' }}">
+                <a class="nav-link" href="{{ route('student.progress.index') }}">
+                    <i class="fas fa-fw fa-chart-line"></i>
+                    <span>My Progress</span>
+                </a>
+            </li>
+
+            <!-- Divider -->
+            <hr class="sidebar-divider">
+
+            <!-- Heading -->
+            <div class="sidebar-heading">
+                Support
+            </div>
 
             <!-- Nav Item - Feedback -->
             <li class="nav-item {{ request()->routeIs('student.feedback.*') ? 'active' : '' }}">
                 <a class="nav-link" href="{{ route('student.feedback.index') }}">
                     <i class="fas fa-fw fa-comment-dots"></i>
                     <span>Feedback</span>
+                </a>
+            </li>
+
+            <!-- 🆕 Nav Item - Notifications (NEW!) -->
+            <li class="nav-item {{ request()->routeIs('student.notifications.*') ? 'active' : '' }}">
+                <a class="nav-link" href="{{ route('student.notifications.index') }}">
+                    <i class="fas fa-fw fa-bell"></i>
+                    <span>Notifications</span>
+                    @if($unreadCount > 0)
+                        <span class="badge badge-danger badge-counter ml-2">{{ $unreadCount }}</span>
+                    @endif
+                </a>
+            </li>
+
+            <!-- Nav Item - Settings -->
+            <li class="nav-item {{ request()->routeIs('student.settings.*') ? 'active' : '' }}">
+                <a class="nav-link" href="{{ route('student.settings.index') }}">
+                    <i class="fas fa-fw fa-cog"></i>
+                    <span>Settings</span>
                 </a>
             </li>
 
@@ -150,6 +227,7 @@
             <div class="text-center d-none d-md-inline">
                 <button class="rounded-circle border-0" id="sidebarToggle"></button>
             </div>
+
         </ul>
         <!-- End of Sidebar -->
 
@@ -159,6 +237,7 @@
             <div id="content">
                 <!-- Topbar -->
                 <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+                    
                     <!-- Sidebar Toggle (Topbar) -->
                     <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
                         <i class="fa fa-bars"></i>
@@ -179,33 +258,84 @@
                     <!-- Topbar Navbar -->
                     <ul class="navbar-nav ml-auto">
                         <!-- Nav Item - Alerts -->
+                      <!-- Topbar -->
+                    <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+
+                    <!-- Sidebar Toggle (Topbar) -->
+                    <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
+                        <i class="fa fa-bars"></i>
+                    </button>
+
+                    <!-- Topbar Navbar -->
+                    <ul class="navbar-nav ml-auto">
+
+                        <!-- 🆕 Nav Item - Notifications -->
+                        @php
+                            $unreadCount = Auth::user()->notifications()->where('is_read', false)->count();
+                            $recentNotifications = Auth::user()->notifications()
+                                ->orderBy('created_at', 'desc')
+                                ->limit(5)
+                                ->get();
+                        @endphp
+                        
+                        <!-- Notifications Dropdown -->
                         <li class="nav-item dropdown no-arrow mx-1">
                             <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 <i class="fas fa-bell fa-fw"></i>
-                                <!-- Counter - Alerts -->
-                                @if(auth()->user()->notifications()->unread()->count() > 0)
-                                <span class="badge badge-danger badge-counter">{{ auth()->user()->notifications()->unread()->count() }}</span>
+                                @if($unreadCount > 0)
+                                    <span class="badge badge-danger badge-counter">{{ $unreadCount > 9 ? '9+' : $unreadCount }}</span>
                                 @endif
                             </a>
-                            <!-- Dropdown - Alerts -->
-                            <div class="dropdown-list dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="alertsDropdown">
-                                <h6 class="dropdown-header">Notifications</h6>
-                                @forelse(auth()->user()->notifications()->unread()->limit(5)->get() as $notification)
-                                <a class="dropdown-item d-flex align-items-center" href="#">
-                                    <div class="mr-3">
-                                        <div class="icon-circle bg-{{ $notification->type }}">
-                                            <i class="fas fa-bell text-white"></i>
+                            
+                            <!-- Dropdown - Notifications -->
+                            <div class="dropdown-list dropdown-menu dropdown-menu-right shadow animated--grow-in"
+                                aria-labelledby="alertsDropdown" style="max-width: 380px; min-width: 320px;">
+                                <h6 class="dropdown-header bg-info text-white">
+                                    <i class="fas fa-bell"></i> Notifications
+                                </h6>
+                                
+                                <div class="notification-list" style="max-height: 400px; overflow-y: auto;">
+                                    @forelse($recentNotifications as $notification)
+                                        <a class="dropdown-item d-flex align-items-center {{ !$notification->is_read ? 'bg-light' : '' }}" 
+                                        href="{{ route('student.notifications.mark-read', $notification) }}">
+                                            <div class="me-3">
+                                                @if($notification->type === 'info')
+                                                    <div class="icon-circle bg-info">
+                                                        <i class="fas fa-info-circle text-white"></i>
+                                                    </div>
+                                                @elseif($notification->type === 'success')
+                                                    <div class="icon-circle bg-success">
+                                                        <i class="fas fa-check-circle text-white"></i>
+                                                    </div>
+                                                @elseif($notification->type === 'warning')
+                                                    <div class="icon-circle bg-warning">
+                                                        <i class="fas fa-exclamation-triangle text-white"></i>
+                                                    </div>
+                                                @else
+                                                    <div class="icon-circle bg-danger">
+                                                        <i class="fas fa-exclamation-circle text-white"></i>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                            <div>
+                                                <div class="small text-gray-500">{{ $notification->created_at->diffForHumans() }}</div>
+                                                <span class="font-weight-bold">{{ Str::limit($notification->title, 50) }}</span>
+                                                @if(!$notification->is_read)
+                                                    <span class="badge bg-info ms-1">New</span>
+                                                @endif
+                                            </div>
+                                        </a>
+                                    @empty
+                                        <div class="dropdown-item text-center py-3">
+                                            <i class="fas fa-bell-slash text-muted"></i>
+                                            <p class="mb-0 text-muted">No new notifications</p>
                                         </div>
-                                    </div>
-                                    <div>
-                                        <div class="small text-gray-500">{{ $notification->created_at->diffForHumans() }}</div>
-                                        <span class="font-weight-bold">{{ $notification->title }}</span>
-                                    </div>
+                                    @endforelse
+                                </div>
+                                
+                                <a class="dropdown-item text-center small text-gray-500 bg-light" href="{{ route('student.notifications.index') }}">
+                                    <i class="fas fa-eye"></i> View All Notifications
                                 </a>
-                                @empty
-                                <a class="dropdown-item text-center small text-gray-500">No new notifications</a>
-                                @endforelse
-                                <a class="dropdown-item text-center small text-gray-500" href="#">Show All Notifications</a>
                             </div>
                         </li>
 
@@ -214,15 +344,23 @@
                         <!-- Nav Item - User Information -->
                         <li class="nav-item dropdown no-arrow">
                             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <span class="mr-2 d-none d-lg-inline text-gray-600 small">{{ auth()->user()->full_name }}</span>
-                                @if(auth()->user()->profile_picture)
-                                <img class="img-profile rounded-circle" src="{{ Storage::url(auth()->user()->profile_picture) }}" alt="Profile">
+                                <span class="mr-2 d-none d-lg-inline text-gray-600 small">
+                                    {{ Auth::user()->student->full_name }}
+                                </span>
+                                @if(Auth::user()->profile_picture)
+                                    <img class="img-profile rounded-circle" 
+                                        src="{{ Storage::url(Auth::user()->profile_picture) }}"
+                                        alt="Profile">
                                 @else
-                                <img class="img-profile rounded-circle" src="{{ asset('img/undraw_profile.svg') }}" alt="Profile">
+                                    <img class="img-profile rounded-circle" 
+                                        src="{{ asset('img/undraw_profile.svg') }}"
+                                        alt="Default Profile">
                                 @endif
                             </a>
+                            
                             <!-- Dropdown - User Information -->
-                            <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="userDropdown">
+                            <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
+                                aria-labelledby="userDropdown">
                                 <a class="dropdown-item" href="{{ route('profile.edit') }}">
                                     <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
                                     Profile
@@ -238,9 +376,11 @@
                                 </a>
                             </div>
                         </li>
+
                     </ul>
-                </nav>
-                <!-- End of Topbar -->
+
+                    </nav>
+                    <!-- End of Topbar -->
 
                 <!-- Begin Page Content -->
                 <div class="container-fluid">

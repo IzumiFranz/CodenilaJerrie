@@ -13,14 +13,19 @@ return new class extends Migration
     {
         Schema::create('lesson_views', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('lesson_id')->constrained()->onDelete('cascade');
+            $table->foreignId('lesson_id')->constrained('lessons')->onDelete('cascade');
             $table->foreignId('student_id')->constrained('students')->onDelete('cascade');
             $table->timestamp('viewed_at');
-            $table->integer('time_spent')->default(0); // seconds
+            $table->integer('duration_seconds')->nullable(); // Time spent viewing
             $table->boolean('completed')->default(false);
+            $table->timestamp('completed_at')->nullable();
+            $table->string('ip_address')->nullable();
             $table->timestamps();
             
-            $table->unique(['lesson_id', 'student_id']);
+            $table->index('lesson_id');
+            $table->index('student_id');
+            $table->index('viewed_at');
+            $table->unique(['lesson_id', 'student_id', 'viewed_at']);
         });
     }
 

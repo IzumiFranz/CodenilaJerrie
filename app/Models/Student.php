@@ -91,4 +91,42 @@ class Student extends Model
             ->flatten()
             ->unique('id');
     }
+
+    public function lessonViews()
+    {
+        return $this->hasMany(LessonView::class);
+    }
+
+    public function viewedLessons()
+    {
+        return $this->belongsToMany(Lesson::class, 'lesson_views')
+            ->withPivot('viewed_at', 'duration_seconds', 'completed', 'completed_at')
+            ->withTimestamps();
+    }
+
+    public function getCompletedLessonsCount(int $subjectId = null): int
+    {
+        $query = $this->lessonViews()->where('completed', true);
+        
+        if ($subjectId) {
+            $query->whereHas('lesson', function($q) use ($subjectId) {
+                $q->where('subject_id', $subjectId);
+            });
+        }
+        
+        return $query->distinct('lesson_id')->count('lesson_id');
+    }
+
+    public function getTotalStudyTime(int $subjectId = null): int
+    {
+        $query = $this->lessonViews();
+        
+        if ($subjectId) {
+            $query->whereHas('lesson', function($q) use ($subjectId) {
+                $q->where('subject_id', $subjectId);
+            });
+        }
+        
+        return $query->sum('duration_seconds') ?? 0;
+    }
 }

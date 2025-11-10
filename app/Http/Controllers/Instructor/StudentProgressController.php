@@ -9,6 +9,7 @@ use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use App\Models\InstructorSubjectSection;
 use App\Models\Enrollment;
+use App\Services\PerformanceAlertService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -343,4 +344,30 @@ class StudentProgressController extends Controller
         return $pdf->download($filename);
     }
 
+    public function alerts(PerformanceAlertService $alertService)
+    {
+        $instructor = auth()->user()->instructor;
+        
+        $alerts = $alertService->checkAndGenerateAlerts($instructor);
+        
+        return view('instructor.student-progress.alerts', compact('alerts'));
+    }
+    
+    /**
+     * Dismiss alert notification
+     */
+    public function dismissAlert(Request $request)
+    {
+        $validated = $request->validate([
+            'student_id' => ['required', 'exists:students,id'],
+            'alert_type' => ['required', 'in:failing,multiple_failures,no_attempts'],
+        ]);
+        
+        // Mark as acknowledged in session
+        $key = "alert_dismissed_{$validated['alert_type']}_{$validated['student_id']}";
+        session([$key => now()->addDays(7)]); // Dismiss for 7 days
+        
+        return response()->json(['success' => true]);
+    }
+    
 }

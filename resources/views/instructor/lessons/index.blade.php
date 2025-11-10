@@ -68,6 +68,13 @@
                             <span class="badge badge-{{ $lesson->is_published ? 'success' : 'secondary' }}">
                                 {{ $lesson->is_published ? 'Published' : 'Draft' }}
                             </span>
+
+                            @if($lesson->isScheduledForPublish())
+                                <span class="badge badge-info ml-2" title="Scheduled for {{ $lesson->scheduled_publish_at->format('M d, Y h:i A') }}">
+                                    <i class="fas fa-clock"></i> Scheduled
+                                </span>
+                            @endif
+                            
                         </td>
                         <td>{{ $lesson->order }}</td>
                         <td>
@@ -88,6 +95,15 @@
                                 <a href="{{ route('instructor.lessons.edit', $lesson) }}" class="btn btn-warning" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
+
+                                <button type="button" 
+                                        class="btn btn-info" 
+                                        data-toggle="modal" 
+                                        data-target="#scheduleModal{{ $lesson->id }}"
+                                        title="Schedule Publish">
+                                    <i class="fas fa-clock"></i>
+                                </button>
+
                                 <form action="{{ route('instructor.lessons.toggle-publish', $lesson) }}" method="POST" class="d-inline">
                                     @csrf
                                     <button type="submit" class="btn btn-{{ $lesson->is_published ? 'secondary' : 'success' }}" 

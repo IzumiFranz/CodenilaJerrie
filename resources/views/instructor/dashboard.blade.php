@@ -217,6 +217,15 @@
     </div>
 </div>
 
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-success">Performance by Subject</h6>
+    </div>
+    <div class="card-body">
+        <canvas id="performanceChart" height="80"></canvas>
+    </div>
+</div>
+
 <!-- Recent Activities -->
 <div class="row">
     <div class="col-lg-6 mb-4">
@@ -267,5 +276,50 @@
         </div>
     </div>
 </div>
-
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const ctx = document.getElementById('performanceChart').getContext('2d');
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: {!! json_encode(array_column($performanceBySubject, 'subject')) !!},
+        datasets: [{
+            label: 'Average Score (%)',
+            data: {!! json_encode(array_column($performanceBySubject, 'average')) !!},
+            backgroundColor: 'rgba(28, 200, 138, 0.5)',
+            borderColor: 'rgba(28, 200, 138, 1)',
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                    callback: function(value) {
+                        return value + '%';
+                    }
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return 'Average: ' + context.parsed.y.toFixed(1) + '%';
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
+@endpush
 @endsection

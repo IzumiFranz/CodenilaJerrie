@@ -9,6 +9,7 @@ use App\Models\Subject;
 use App\Models\InstructorSubjectSection;
 use App\Models\QuizAttempt;
 use App\Models\AuditLog;
+use App\Mail\QuizPublishedMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -215,23 +216,74 @@ class QuizController extends Controller
     public function togglePublish(Quiz $quiz)
     {
         $this->authorize('publish', $quiz);
-
+        
         try {
             if (!$quiz->is_published && $quiz->questions()->count() === 0) {
                 return back()->with('error', 'Cannot publish quiz without questions.');
             }
-
+            
+            $wasPublished = $quiz->is_published;
             $quiz->is_published = !$quiz->is_published;
             $quiz->save();
-
+            
             AuditLog::log('quiz_publish_toggled', $quiz);
-
-            // TODO: Notify enrolled students if published
-
+            
+            // 🔔 SEND EMAIL TO ENROLLED STUDENTS
+            foreach ($students as $student) {
+                $settings = $student->user->settings ?? (object)[
+                    'email_quiz_published' => true,
+                    'notification_quiz_published' => true
+                ];
+                
+                if ($settings->email_quiz_published) {
+                    Mail::to($student->user->email)->queue(new QuizPublishedMail($quiz));
+                }
+                
+                if ($settings->notification_quiz_published) {
+                    Notification::create([
+                        'user_id' => $student->user_id,
+                        'type' => 'info',
+                        'title' => 'New Quiz Available',
+                        'message' => "Quiz: {$quiz->title}",
+                        'action_url' => route('student.quizzes.show', $quiz),
+                    ]);
+                }
+            }
+            
             $status = $quiz->is_published ? 'published' : 'unpublished';
             return back()->with('success', "Quiz {$status} successfully.");
+            
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to toggle publish status: ' . $e->getMessage());
+        }
+    }
+
+    private function notifyStudentsAboutQuiz(Quiz $quiz)
+    {
+        // Get all students enrolled in sections where this subject is taught
+        $students = \App\Models\Student::whereHas('enrollments', function($q) use ($quiz) {
+            $q->whereHas('section.assignments', function($query) use ($quiz) {
+                $query->where('subject_id', $quiz->subject_id)
+                      ->where('instructor_id', $quiz->instructor_id);
+            })
+            ->where('status', 'enrolled');
+        })
+        ->with('user')
+        ->get();
+        
+        // Send email to each student
+        foreach ($students as $student) {
+            Mail::to($student->user->email)
+                ->queue(new QuizPublishedMail($quiz));
+                
+            // Create in-app notification
+            \App\Models\Notification::create([
+                'user_id' => $student->user_id,
+                'type' => 'info',
+                'title' => 'New Quiz Available',
+                'message' => "A new quiz '{$quiz->title}' is now available in {$quiz->subject->subject_name}.",
+                'action_url' => route('student.quizzes.show', $quiz),
+            ]);
         }
     }
 
@@ -377,6 +429,172 @@ class QuizController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Failed to duplicate quiz: ' . $e->getMessage());
+        }
+    }
+
+    public function bulkAddQuestions(Request $request, Quiz $quiz)
+    {
+        $this->authorize('manageQuestions', $quiz);
+        
+        $validated = $request->validate([
+            'question_ids' => ['required', 'array', 'min:1'],
+            'question_ids.*' => ['required', 'exists:question_bank,id'],
+        ]);
+        
+        try {
+            DB::beginTransaction();
+            
+            $instructor = auth()->user()->instructor;
+            $addedCount = 0;
+            $skippedCount = 0;
+            $maxOrder = $quiz->questions()->max('order') ?? 0;
+            
+            foreach ($validated['question_ids'] as $questionId) {
+                $question = QuestionBank::find($questionId);
+                
+                // Verify question belongs to instructor and same subject
+                if ($question->instructor_id !== $instructor->id) {
+                    $skippedCount++;
+                    continue;
+                }
+                
+                if ($question->subject_id !== $quiz->subject_id) {
+                    $skippedCount++;
+                    continue;
+                }
+                
+                // Check if already added
+                if ($quiz->questions()->where('question_bank_id', $questionId)->exists()) {
+                    $skippedCount++;
+                    continue;
+                }
+                
+                // Add question
+                $quiz->questions()->attach($questionId, [
+                    'order' => ++$maxOrder
+                ]);
+                
+                $addedCount++;
+            }
+            
+            DB::commit();
+            
+            AuditLog::log('quiz_bulk_questions_added', $quiz);
+            
+            $message = "Added {$addedCount} question(s) to quiz.";
+            if ($skippedCount > 0) {
+                $message .= " {$skippedCount} question(s) were skipped (already added or invalid).";
+            }
+            
+            return back()->with('success', $message);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Failed to add questions: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Remove multiple questions from quiz at once
+     */
+    public function bulkRemoveQuestions(Request $request, Quiz $quiz)
+    {
+        $this->authorize('manageQuestions', $quiz);
+        
+        $validated = $request->validate([
+            'question_ids' => ['required', 'array', 'min:1'],
+            'question_ids.*' => ['required', 'exists:question_bank,id'],
+        ]);
+        
+        try {
+            DB::beginTransaction();
+            
+            $removedCount = $quiz->questions()
+                ->whereIn('question_bank_id', $validated['question_ids'])
+                ->count();
+            
+            $quiz->questions()->detach($validated['question_ids']);
+            
+            // Reorder remaining questions
+            $remainingQuestions = $quiz->questions()->orderBy('order')->get();
+            foreach ($remainingQuestions as $index => $question) {
+                DB::table('quiz_question')
+                    ->where('quiz_id', $quiz->id)
+                    ->where('question_bank_id', $question->id)
+                    ->update(['order' => $index + 1]);
+            }
+            
+            DB::commit();
+            
+            AuditLog::log('quiz_bulk_questions_removed', $quiz);
+            
+            return back()->with('success', "Removed {$removedCount} question(s) from quiz.");
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Failed to remove questions: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Schedule quiz publish/unpublish
+     */
+    public function schedule(Request $request, Quiz $quiz)
+    {
+        $this->authorize('update', $quiz);
+        
+        $validated = $request->validate([
+            'scheduled_publish_at' => ['nullable', 'date', 'after:now'],
+            'scheduled_unpublish_at' => ['nullable', 'date', 'after:scheduled_publish_at'],
+            'auto_publish' => ['boolean'],
+        ]);
+        
+        try {
+            // Check if quiz has questions before allowing schedule
+            if ($validated['auto_publish'] && $quiz->questions()->count() === 0) {
+                return back()->with('error', 'Cannot schedule quiz without questions.');
+            }
+            
+            $quiz->update([
+                'scheduled_publish_at' => $validated['scheduled_publish_at'] ?? null,
+                'scheduled_unpublish_at' => $validated['scheduled_unpublish_at'] ?? null,
+                'auto_publish' => $validated['auto_publish'] ?? false,
+            ]);
+            
+            AuditLog::log('quiz_scheduled', $quiz);
+            
+            $message = 'Quiz scheduling updated successfully.';
+            if ($quiz->auto_publish && $quiz->scheduled_publish_at) {
+                $message .= ' Will auto-publish on ' . $quiz->scheduled_publish_at->format('M d, Y h:i A');
+            }
+            
+            return back()->with('success', $message);
+            
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to update schedule: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Cancel scheduled publish
+     */
+    public function cancelSchedule(Quiz $quiz)
+    {
+        $this->authorize('update', $quiz);
+        
+        try {
+            $quiz->update([
+                'scheduled_publish_at' => null,
+                'scheduled_unpublish_at' => null,
+                'auto_publish' => false,
+            ]);
+            
+            AuditLog::log('quiz_schedule_cancelled', $quiz);
+            
+            return back()->with('success', 'Schedule cancelled successfully.');
+            
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to cancel schedule: ' . $e->getMessage());
         }
     }
 }

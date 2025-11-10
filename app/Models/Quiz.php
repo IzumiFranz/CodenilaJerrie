@@ -27,6 +27,16 @@ class Quiz extends Model
         'available_from',
         'available_until',
         'published_at',
+        'scheduled_publish_at',
+        'scheduled_unpublish_at',
+        'auto_publish',
+        'difficulty_level',
+        'estimated_duration',
+        'allow_practice_mode',
+        'allow_review_mode',
+        'show_correct_in_review',
+        'show_explanation_in_review',
+        'review_available_after',
     ];
 
     protected function casts(): array
@@ -44,6 +54,15 @@ class Quiz extends Model
             'available_until' => 'datetime',
             'published_at' => 'datetime',
             'publish_at' => 'datetime',
+            'scheduled_publish_at' => 'datetime',
+            'scheduled_unpublish_at' => 'datetime',
+            'auto_publish' => 'boolean',
+            'estimated_duration' => 'integer',
+            'allow_practice_mode' => 'boolean',
+            'allow_review_mode' => 'boolean',
+            'show_correct_in_review' => 'boolean',
+            'show_explanation_in_review' => 'boolean',
+            'review_available_after' => 'integer',
         ];
     }
 
@@ -87,12 +106,6 @@ class Quiz extends Model
         if ($avg <= 1.5) return 'easy';
         if ($avg >= 2.5) return 'hard';
         return 'medium';
-    }
-
-    public function calculateDifficultyLevel()
-    {
-        $this->difficulty_level = $this->getAverageDifficulty();
-        $this->save();
     }
 
     public function isPracticeMode($attemptId = null)
@@ -186,5 +199,122 @@ class Quiz extends Model
             ->count();
 
         return round(($passed / $total) * 100, 2);
+    }
+
+    public function isScheduledForPublish(): bool
+    {
+        return $this->auto_publish && 
+            $this->scheduled_publish_at && 
+            !$this->is_published;
+    }
+
+    public function shouldAutoPublish(): bool
+    {
+        if (!$this->isScheduledForPublish()) {
+            return false;
+        }
+        
+        return now()->gte($this->scheduled_publish_at);
+    }
+
+    public function shouldAutoUnpublish(): bool
+    {
+        if (!$this->is_published || !$this->scheduled_unpublish_at) {
+            return false;
+        }
+        
+        return now()->gte($this->scheduled_unpublish_at);
+    }
+
+    public function calculateDifficultyLevel(): void
+    {
+        if ($this->questions->count() === 0) {
+            $this->difficulty_level = null;
+            $this->save();
+            return;
+        }
+        
+        $difficulties = $this->questions->pluck('difficulty');
+        $counts = $difficulties->countBy();
+        
+        $easy = $counts->get('easy', 0);
+        $medium = $counts->get('medium', 0);
+        $hard = $counts->get('hard', 0);
+        $total = $this->questions->count();
+        
+        // Calculate weighted average
+        $score = ($easy * 1 + $medium * 2 + $hard * 3) / $total;
+        
+        if ($score <= 1.5) {
+            $this->difficulty_level = 'easy';
+        } elseif ($score <= 2.5) {
+            $this->difficulty_level = 'medium';
+        } else {
+            $this->difficulty_level = 'hard';
+        }
+        
+        $this->save();
+    }
+
+    public function calculateEstimatedDuration(): void
+    {
+        if ($this->questions->count() === 0) {
+            $this->estimated_duration = null;
+            $this->save();
+            return;
+        }
+        
+        // Estimate: 1-2 minutes per multiple choice, 2-3 for others
+        $duration = 0;
+        foreach ($this->questions as $question) {
+            switch ($question->type) {
+                case 'multiple_choice':
+                case 'true_false':
+                    $duration += 1.5; // minutes
+                    break;
+                case 'identification':
+                    $duration += 2;
+                    break;
+                case 'essay':
+                    $duration += 5;
+                    break;
+            }
+        }
+        
+        $this->estimated_duration = max(5, ceil($duration));
+        $this->save();
+    }
+    public function canReview(QuizAttempt $attempt): bool
+    {
+        if (!$this->allow_review || !$attempt->isCompleted()) {
+            return false;
+        }
+        
+        if ($this->review_available_after) {
+            $minutesSinceCompletion = $attempt->completed_at->diffInMinutes(now());
+            return $minutesSinceCompletion >= $this->review_available_after;
+        }
+        
+        return true;
+    }
+
+    public function isAvailableToStudent($student)
+    {
+        if (!$this->is_published) return false;
+        
+        // Check date availability
+        $now = now();
+        if ($this->available_from && $now < $this->available_from) return false;
+        if ($this->available_until && $now > $this->available_until) return false;
+        
+        // Check enrollment
+        $sectionIds = $student->enrollments()
+            ->where('status', 'enrolled')
+            ->pluck('section_id');
+        
+        return \DB::table('instructor_subject_section')
+            ->whereIn('section_id', $sectionIds)
+            ->where('subject_id', $this->subject_id)
+            ->exists();
     }
 }

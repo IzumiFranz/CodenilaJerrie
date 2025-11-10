@@ -23,6 +23,7 @@ use App\Http\Controllers\Instructor\LessonController;
 use App\Http\Controllers\Instructor\QuizController;
 use App\Http\Controllers\Instructor\QuestionBankController;
 use App\Http\Controllers\Instructor\StudentProgressController;
+use App\Http\Controllers\Instructor\QuizTemplateController;
 use App\Http\Controllers\Student\StudentDashboardController;
 use App\Http\Controllers\Student\LessonController as StudentLessonController;
 use App\Http\Controllers\Student\QuizController as StudentQuizController;
@@ -47,7 +48,7 @@ Route::get('/', function () {
             default => redirect()->route('login'),
         };
     }
-    return redirect()->route('login');
+    return view('welcome');
 })->name('home');
 
 // Auth routes (Laravel Breeze)
@@ -198,9 +199,42 @@ Route::middleware(['auth', 'role:instructor', 'password.change'])
         ->name('lessons.duplicate');
     Route::get('lessons/{lesson}/download', [LessonController::class, 'download'])
         ->name('lessons.download');
+    Route::get('/lessons/{lesson}/view-statistics', [LessonController::class, 'viewStatistics'])
+        ->name('lessons.view-statistics');
+    Route::post('/lessons/{lesson}/schedule', [LessonController::class, 'schedule'])
+        ->name('lessons.schedule');
+    Route::delete('/lessons/{lesson}/schedule', [LessonController::class, 'cancelSchedule'])
+        ->name('lessons.cancel-schedule');
     
+
+    Route::prefix('lessons/{lesson}')->name('lessons.')->group(function () {
+        Route::get('attachments', [LessonController::class, 'attachments'])
+            ->name('attachments');
+        Route::post('attachments/upload', [LessonController::class, 'uploadAttachments'])
+            ->name('attachments.upload');
+        Route::delete('attachments/{attachment}', [LessonController::class, 'deleteAttachment'])
+            ->name('attachments.delete');
+        Route::post('attachments/{attachment}/toggle-visibility', [LessonController::class, 'toggleAttachmentVisibility'])
+            ->name('attachments.toggle-visibility');
+        Route::post('attachments/{attachment}/description', [LessonController::class, 'updateAttachmentDescription'])
+            ->name('attachments.update-description');
+        Route::post('attachments/reorder', [LessonController::class, 'reorderAttachments'])
+            ->name('attachments.reorder');
+        Route::get('attachments/{attachment}/download', [LessonController::class, 'downloadAttachment'])
+            ->name('attachments.download');
+    });
+
+
     // Question Bank Management
     Route::resource('question-bank', QuestionBankController::class);
+    Route::get('/question-bank/{questionBank}/edit', [QuestionBankController::class, 'edit'])
+        ->name('question-bank.edit');
+    Route::get('/question-bank/{questionBank}', [QuestionBankController::class, 'show'])
+        ->name('question-bank.show');
+    Route::get('/question-bank/{questionBank}', [QuestionBankController::class, 'create'])
+        ->name('question-bank.create');
+    Route::get('/question-bank/{questionBank}', [QuestionBankController::class, 'index'])
+        ->name('question-bank.index');
     Route::post('question-bank/{question}/duplicate', [QuestionBankController::class, 'duplicate'])
         ->name('question-bank.duplicate');
     Route::post('question-bank/{question}/validate', [QuestionBankController::class, 'validateQuestion'])
@@ -209,6 +243,14 @@ Route::middleware(['auth', 'role:instructor', 'password.change'])
         ->name('question-bank.generate');
     Route::get('question-bank/{question}/analytics', [QuestionBankController::class, 'analytics'])
         ->name('question-bank.analytics');
+    Route::get('/question-bank/{questionBank}/preview', [QuestionBankController::class, 'preview'])
+        ->name('question-bank.preview');
+    Route::get('/question-bank/import', [QuestionBankController::class, 'importForm'])
+        ->name('question-bank.import');
+    Route::post('/question-bank/import', [QuestionBankController::class, 'import'])
+        ->name('question-bank.import.process');
+    Route::get('/question-bank/import/template', [QuestionBankController::class, 'downloadTemplate'])
+        ->name('question-bank.import.template');
     
     // Quiz Management
     Route::resource('quiz-templates', QuizTemplateController::class)
@@ -229,7 +271,30 @@ Route::middleware(['auth', 'role:instructor', 'password.change'])
         ->name('quizzes.analytics');
     Route::post('quizzes/{quiz}/duplicate', [QuizController::class, 'duplicate'])
         ->name('quizzes.duplicate');
+    Route::post('/quizzes/{quiz}/questions/bulk-add', [QuizController::class, 'bulkAddQuestions'])
+        ->name('quizzes.questions.bulk-add');
+    Route::post('/quizzes/{quiz}/questions/bulk-remove', [QuizController::class, 'bulkRemoveQuestions'])
+        ->name('quizzes.questions.bulk-remove');
+    Route::post('/quizzes/{quiz}/schedule', [QuizController::class, 'schedule'])
+        ->name('quizzes.schedule');
+    Route::delete('/quizzes/{quiz}/schedule', [QuizController::class, 'cancelSchedule'])
+        ->name('quizzes.cancel-schedule');
     
+
+    //Question Tags
+    // Question Tags
+    Route::resource('question-tags', QuestionTagController::class)
+        ->names([
+    'index' => 'question-tags.index',
+    'create' => 'question-tags.create',
+    'store' => 'question-tags.store',
+    'edit' => 'question-tags.edit',
+    'update' => 'question-tags.update',
+    'destroy' => 'question-tags.destroy',
+    ]);
+    Route::get('/question-tags/get-tags', [QuestionTagController::class, 'getTags'])
+        ->name('question-tags.get-tags');
+
     // Student Progress
     Route::get('student-progress', [StudentProgressController::class, 'index'])
         ->name('student-progress.index');
@@ -237,6 +302,10 @@ Route::middleware(['auth', 'role:instructor', 'password.change'])
         ->name('student-progress.show');
     Route::get('student-progress/export/{section}', [StudentProgressController::class, 'export'])
         ->name('student-progress.export');
+    Route::get('/student-progress/alerts', [StudentProgressController::class, 'alerts'])
+        ->name('student-progress.alerts');
+    Route::post('/student-progress/dismiss-alert', [StudentProgressController::class, 'dismissAlert'])
+        ->name('student-progress.dismiss-alert');
 });
 
 /*
@@ -253,11 +322,29 @@ Route::middleware(['auth', 'role:student', 'password.change'])
     Route::get('/dashboard', [StudentDashboardController::class, 'index'])->name('dashboard');
     
     // Lessons
-    Route::get('lessons', [StudentLessonController::class, 'index'])->name('lessons.index');
-    Route::get('lessons/{lesson}', [StudentLessonController::class, 'show'])->name('lessons.show');
-    Route::get('lessons/{lesson}/download', [StudentLessonController::class, 'download'])
+    Route::get('lessons', [LessonController::class, 'index'])->name('lessons.index');
+    Route::get('lessons/{lesson}', [LessonController::class, 'show'])->name('lessons.show');
+    Route::get('lessons/{lesson}/download', [LessonController::class, 'download'])
         ->name('lessons.download');
+    Route::post('/lessons/{lesson}/track-view', [LessonController::class, 'trackView'])
+        ->name('lessons.track-view');
+    Route::post('/lessons/{lesson}/update-duration', [LessonController::class, 'updateDuration'])
+        ->name('lessons.update-duration');
+    Route::post('/lessons/{lesson}/mark-completed', [LessonController::class, 'markCompleted'])
+        ->name('lessons.mark-completed');
     
+       
+        // Lesson Attachments
+    Route::prefix('lessons/{lesson}')->name('lessons.')->group(function () {
+        Route::get('attachments/{attachment}/download', [LessonController::class, 'downloadAttachment'])
+            ->name('attachments.download');
+        Route::get('attachments/{attachment}/view', [LessonController::class, 'viewAttachment'])
+            ->name('attachments.view');
+        Route::post('attachments/download-all', [LessonController::class, 'downloadAllAttachments'])
+            ->name('attachments.download-all');
+    });
+     
+        
     // Quizzes
     Route::get('quizzes', [StudentQuizController::class, 'index'])->name('quizzes.index');
     Route::get('quizzes/{quiz}', [StudentQuizController::class, 'show'])->name('quizzes.show');
@@ -277,12 +364,47 @@ Route::middleware(['auth', 'role:student', 'password.change'])
         ->name('quiz-attempts.review');
         Route::get('quiz-attempts/{attempt}/export-pdf', [QuizAttemptController::class, 'exportPdf'])
         ->name('quiz-attempts.export-pdf');
+    Route::get('/quizzes/{quiz}/attempts/{attempt}/review', [QuizAttemptController::class, 'review'])
+        ->name('quiz-attempts.review');
+    Route::get('/quizzes/{quiz}/attempts/{attempt}/print-review', [QuizAttemptController::class, 'printReview'])
+        ->name('quiz-attempts.print-review');
 
     // Feedback
     Route::get('feedback', [FeedbackController::class, 'index'])->name('feedback.index');
     Route::get('feedback/create', [FeedbackController::class, 'create'])->name('feedback.create');
     Route::post('feedback', [FeedbackController::class, 'store'])->name('feedback.store');
     Route::get('feedback/{feedback}', [FeedbackController::class, 'show'])->name('feedback.show');
+
+
+    // Notifications (NEW!)
+    Route::get('notifications', [\App\Http\Controllers\Student\NotificationController::class, 'index'])
+        ->name('notifications.index');
+    Route::patch('notifications/{notification}/read', [\App\Http\Controllers\Student\NotificationController::class, 'markAsRead'])
+        ->name('notifications.mark-read');
+    Route::post('notifications/mark-all-read', [\App\Http\Controllers\Student\NotificationController::class, 'markAllAsRead'])
+        ->name('notifications.mark-all-read');
+    Route::delete('notifications/{notification}', [\App\Http\Controllers\Student\NotificationController::class, 'destroy'])
+        ->name('notifications.destroy');
+    Route::get('notifications/unread', [\App\Http\Controllers\Student\NotificationController::class, 'unread'])
+        ->name('notifications.unread');
+    
+    // Progress & Grades (NEW!)
+    Route::get('progress', [\App\Http\Controllers\Student\ProgressController::class, 'index'])
+        ->name('progress.index');
+
+        // Settings (NEW!)
+    Route::get('settings', [\App\Http\Controllers\Student\SettingsController::class, 'index'])
+        ->name('settings.index');
+    Route::post('settings/notifications', [\App\Http\Controllers\Student\SettingsController::class, 'updateNotifications'])
+        ->name('settings.update-notifications');
+    Route::post('settings/display', [\App\Http\Controllers\Student\SettingsController::class, 'updateDisplay'])
+        ->name('settings.update-display');
+    Route::post('settings/privacy', [\App\Http\Controllers\Student\SettingsController::class, 'updatePrivacy'])
+        ->name('settings.update-privacy');
+    Route::post('settings/quiz', [\App\Http\Controllers\Student\SettingsController::class, 'updateQuizPreferences'])
+        ->name('settings.update-quiz');
+    Route::post('settings/reset', [\App\Http\Controllers\Student\SettingsController::class, 'reset'])
+        ->name('settings.reset');
 });
 
 /*

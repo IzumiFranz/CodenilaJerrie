@@ -148,6 +148,61 @@
 
             <hr>
 
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-success">Review Settings</h6>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <div class="custom-control custom-switch">
+                            <input type="checkbox" class="custom-control-input" id="allow_review" name="allow_review" value="1" 
+                                {{ old('allow_review', $quiz->allow_review ?? true) ? 'checked' : '' }}>
+                            <label class="custom-control-label" for="allow_review">
+                                <strong>Allow students to review their answers</strong>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="reviewOptions" style="{{ old('allow_review', $quiz->allow_review ?? true) ? '' : 'display:none;' }}">
+                        <div class="form-group">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="show_correct_in_review" name="show_correct_in_review" value="1"
+                                    {{ old('show_correct_in_review', $quiz->show_correct_in_review ?? true) ? 'checked' : '' }}>
+                                <label class="custom-control-label" for="show_correct_in_review">
+                                    Show correct answers during review
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="show_explanation_in_review" name="show_explanation_in_review" value="1"
+                                    {{ old('show_explanation_in_review', $quiz->show_explanation_in_review ?? true) ? 'checked' : '' }}>
+                                <label class="custom-control-label" for="show_explanation_in_review">
+                                    Show explanations during review
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="review_available_after">Review Available After (minutes)</label>
+                            <input type="number" class="form-control" id="review_available_after" name="review_available_after"
+                                value="{{ old('review_available_after', $quiz->review_available_after ?? '') }}"
+                                min="0" max="1440" placeholder="Leave blank for immediate review">
+                            <small class="form-text text-muted">
+                                Delay review access after quiz submission (optional, for preventing answer sharing)
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+@push('scripts')
+<script>
+$('#allow_review').change(function() {
+    $('#reviewOptions').toggle(this.checked);
+});
+</script>
+@endpush
             <!-- Availability -->
             <h5 class="text-success mb-3"><i class="fas fa-calendar mr-2"></i>Availability</h5>
 

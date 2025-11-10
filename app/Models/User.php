@@ -74,6 +74,11 @@ class User extends Authenticatable
         return $this->hasMany(AIJob::class);
     }
 
+    public function settings()
+    {
+        return $this->hasOne(UserSetting::class);
+    }
+
     // Helper Methods
     public function isAdmin(): bool
     {

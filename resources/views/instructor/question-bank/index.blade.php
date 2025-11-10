@@ -64,6 +64,7 @@
                         <th>Type</th>
                         <th>Difficulty</th>
                         <th>Points</th>
+                        <th>Tags</th>
                         <th width="180">Actions</th>
                     </tr>
                 </thead>
@@ -83,6 +84,14 @@
                             </span>
                         </td>
                         <td>{{ $question->points }}</td>
+                        <td>
+                            @foreach($question->tags as $tag)
+                                <span class="badge {{ $tag->getColorBadgeClass() }}" 
+                                    style="background-color: {{ $tag->color }}; font-size: 11px;">
+                                    <i class="fas fa-tag"></i> {{ $tag->name }}
+                                </span>
+                            @endforeach
+                        </td>
                         <td>
                             <div class="btn-group btn-group-sm">
                                 <a href="{{ route('instructor.question-bank.show', $question) }}" class="btn btn-info" title="View">

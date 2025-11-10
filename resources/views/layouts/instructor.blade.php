@@ -215,6 +215,52 @@
     <script src="{{ asset('vendor/jquery-easing/jquery.easing.min.js') }}"></script>
     <script src="{{ asset('js/sb-admin-2.min.js') }}"></script>
     
+    <script>
+    function cancelSchedule(id, type) {
+        if (confirm('Are you sure you want to cancel the scheduled publish?')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = type === 'lesson' 
+                ? `/instructor/lessons/${id}/schedule`
+                : `/instructor/quizzes/${id}/schedule`;
+            
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = '{{ csrf_token() }}';
+            
+            const methodField = document.createElement('input');
+            methodField.type = 'hidden';
+            methodField.name = '_method';
+            methodField.value = 'DELETE';
+            
+            form.appendChild(csrfToken);
+            form.appendChild(methodField);
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+
+    // Validate unpublish date is after publish date
+    $(document).ready(function() {
+        $('input[name="scheduled_publish_at"]').on('change', function() {
+            const publishDate = new Date($(this).val());
+            const unpublishInput = $('input[name="scheduled_unpublish_at"]');
+            const currentUnpublish = new Date(unpublishInput.val());
+            
+            // Set minimum unpublish date to 1 hour after publish date
+            if (publishDate) {
+                const minUnpublish = new Date(publishDate.getTime() + 60 * 60 * 1000);
+                unpublishInput.attr('min', minUnpublish.toISOString().slice(0, 16));
+                
+                // Clear unpublish if it's before the new publish date
+                if (currentUnpublish && currentUnpublish <= publishDate) {
+                    unpublishInput.val('');
+                }
+            }
+        });
+    });
+    </script>
     @stack('scripts')
 </body>
 </html>

@@ -7,6 +7,7 @@ use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use App\Models\QuizAnswer;
 use App\Models\AuditLog;
+use App\Mail\QuizResultMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -19,7 +20,9 @@ class QuizAttemptController extends Controller
         $this->authorize('take', $quiz);
 
         $student = auth()->user()->student;
-
+        if (!$student || $attempt->student_id !== $student->id) {
+            abort(403);
+        }
         // Check if student can take quiz
         if (!$quiz->studentCanTakeQuiz($student)) {
             return back()->with('error', 'You have reached the maximum number of attempts for this quiz.');
@@ -191,20 +194,21 @@ class QuizAttemptController extends Controller
     public function submit(Request $request, QuizAttempt $attempt)
     {
         // Verify ownership
-        if ($attempt->student_id !== auth()->user()->student->id) {
+        $student = auth()->user()->student;
+        if (!$student || $attempt->student_id !== $student->id) {
             abort(403, 'Unauthorized access to quiz attempt.');
         }
-
+    
         // Check if already completed
         if ($attempt->isCompleted()) {
             return redirect()
                 ->route('student.quiz-attempts.results', $attempt)
                 ->with('info', 'This quiz has already been submitted.');
         }
-
+    
         try {
             DB::beginTransaction();
-
+    
             // Grade all auto-gradable answers
             $answers = $attempt->answers()->with('question')->get();
             foreach ($answers as $answer) {
@@ -212,27 +216,55 @@ class QuizAttemptController extends Controller
                     $answer->gradeAutomatically();
                 }
             }
-
-            // Complete the attempt
+    
+            // Calculate scores
+            $totalScore = $answers->sum('points_earned'); // adjust column if different
+            $totalPoints = $answers->sum(fn($a) => $a->question->points ?? 0);
+            $percentage = $totalPoints > 0 ? round(($totalScore / $totalPoints) * 100, 2) : 0;
+    
+            // Update attempt
+            $attempt->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+                'score' => $totalScore,
+                'total_points' => $totalPoints,
+                'percentage' => $percentage,
+            ]);
+    
+            // Complete internal logic (events, logging, etc.)
             $attempt->complete();
-
-            // Log submission
-            AuditLog::log('quiz_attempt_submitted', $attempt);
-
+    
             DB::commit();
-
-            // TODO: Send email notification if quiz settings allow
-            // if ($attempt->quiz->show_results) {
-            //     Mail::to($attempt->student->user->email)->send(new QuizResultMail($attempt));
-            // }
-
+    
+            // Log audit after commit
+            AuditLog::log('quiz_submitted', $attempt);
+    
+            // 🔔 Send result email after commit
+            $settings = $attempt->student->user->settings ?? (object)[
+                'email_quiz_result' => true,
+                'notification_quiz_result' => true
+            ];
+            
+            if ($settings->email_quiz_result) {
+                Mail::to($attempt->student->user->email)->queue(new QuizResultMail($attempt));
+            }
+            
+            if ($settings->notification_quiz_result) {
+                Notification::create([
+                    'user_id' => $attempt->student->user_id,
+                    'type' => $attempt->isPassed() ? 'success' : 'warning',
+                    'title' => 'Quiz Result Available',
+                    'message' => "Your result for '{$attempt->quiz->title}': {$percentage}%",
+                    'action_url' => route('student.quiz-attempts.results', $attempt),]);
+            }
+    
             return redirect()
                 ->route('student.quiz-attempts.results', $attempt)
                 ->with('success', 'Quiz submitted successfully!');
-
+    
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Failed to submit quiz: ' . $e->getMessage());
+            return back()->with('error', 'Failed to submit quiz.');
         }
     }
 
@@ -265,52 +297,74 @@ class QuizAttemptController extends Controller
         return view('student.quiz-attempts.results', compact('attempt', 'allAttempts'));
     }
 
-    public function review(QuizAttempt $attempt)
+    public function review(Quiz $quiz, QuizAttempt $attempt)
     {
+        $student = auth()->user()->student;
+        
         // Verify ownership
-        if ($attempt->student_id !== auth()->user()->student->id) {
-            abort(403, 'Unauthorized access to quiz attempt.');
+        if ($attempt->student_id !== $student->id || $attempt->quiz_id !== $quiz->id) {
+            abort(403);
         }
-
-        // Check if answers can be viewed
-        if (!$attempt->quiz->show_answers) {
-            return back()->with('error', 'Answer review is not available for this quiz.');
+        
+        // Check if review is allowed
+        if (!$quiz->canReview($attempt)) {
+            if ($quiz->review_available_after) {
+                $waitMinutes = $quiz->review_available_after - $attempt->completed_at->diffInMinutes(now());
+                return back()->with('error', "Review will be available in {$waitMinutes} minutes.");
+            }
+            return back()->with('error', 'Review is not available for this quiz.');
         }
-
+        
+        // Load attempt with all data
         $attempt->load([
-            'quiz.subject',
-            'quiz.instructor.user',
             'answers.question.choices',
-            'answers.choice'
+            'answers.choice',
         ]);
-
-        // Get questions in the order they were presented
-        $questionIds = $attempt->question_order;
-        $questions = $attempt->quiz->questions()
-            ->whereIn('question_bank.id', $questionIds)
-            ->with('choices')
-            ->get()
-            ->sortBy(function($question) use ($questionIds) {
-                return array_search($question->id, $questionIds);
+        
+        // Get questions in order
+        if ($attempt->question_order) {
+            $questionOrder = $attempt->question_order;
+            $questions = $quiz->questions->sortBy(function($question) use ($questionOrder) {
+                return array_search($question->id, $questionOrder);
             });
+        } else {
+            $questions = $quiz->questions;
+        }
+        
+        return view('student.quiz-attempts.review', compact('quiz', 'attempt', 'questions'));
+    }
 
-        $answers = $attempt->answers()
-            ->with(['choice', 'question'])
-            ->get()
-            ->keyBy('question_id');
-
-        return view('student.quiz-attempts.review', compact(
-            'attempt',
-            'questions',
-            'answers'
-        ));
+    public function printReview(Quiz $quiz, QuizAttempt $attempt)
+    {
+        $student = auth()->user()->student;
+        
+        // Verify ownership and review access
+        if ($attempt->student_id !== $student->id || !$quiz->canReview($attempt)) {
+            abort(403);
+        }
+        
+        $attempt->load([
+            'answers.question.choices',
+            'answers.choice',
+        ]);
+        
+        if ($attempt->question_order) {
+            $questionOrder = $attempt->question_order;
+            $questions = $quiz->questions->sortBy(function($question) use ($questionOrder) {
+                return array_search($question->id, $questionOrder);
+            });
+        } else {
+            $questions = $quiz->questions;
+        }
+        
+        return view('student.quiz-attempts.print-review', compact('quiz', 'attempt', 'questions'));
     }
 
     private function autoSubmit(QuizAttempt $attempt)
     {
         try {
             DB::beginTransaction();
-
+    
             // Grade all auto-gradable answers
             $answers = $attempt->answers()->with('question')->get();
             foreach ($answers as $answer) {
@@ -318,26 +372,38 @@ class QuizAttemptController extends Controller
                     $answer->gradeAutomatically();
                 }
             }
-
-            // Complete the attempt
+    
+            // Calculate scores
+            $totalScore = $answers->sum('points_earned');
+            $totalPoints = $answers->sum(fn($a) => $a->question->points ?? 0);
+            $percentage = $totalPoints > 0 ? round(($totalScore / $totalPoints) * 100, 2) : 0;
+    
+            // Update attempt
+            $attempt->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+                'score' => $totalScore,
+                'total_points' => $totalPoints,
+                'percentage' => $percentage,
+            ]);
+    
             $attempt->complete();
-
-            // Log auto-submission
+    
             AuditLog::log('quiz_attempt_auto_submitted', $attempt, [], [
                 'reason' => 'time_expired'
             ]);
-
+    
             DB::commit();
-
+    
             return redirect()
                 ->route('student.quiz-attempts.results', $attempt)
                 ->with('warning', 'Quiz was automatically submitted because time expired.');
-
+    
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()
                 ->route('student.dashboard')
-                ->with('error', 'Failed to auto-submit quiz: ' . $e->getMessage());
+                ->with('error', 'Failed to auto-submit quiz.');
         }
     }
 
