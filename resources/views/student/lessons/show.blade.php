@@ -3,159 +3,132 @@
 @section('title', $lesson->title)
 
 @section('content')
-<!-- Breadcrumb -->
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{{ route('student.dashboard') }}">Dashboard</a></li>
-        <li class="breadcrumb-item"><a href="{{ route('student.lessons.index') }}">Lessons</a></li>
-        <li class="breadcrumb-item active" aria-current="page">{{ Str::limit($lesson->title, 50) }}</li>
-    </ol>
-</nav>
+<div class="container-fluid px-4">
+    <!-- Header & Back Button -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="{{ route('student.lessons.index') }}" class="btn btn-outline-secondary btn-sm mb-2">
+                <i class="fas fa-arrow-left mr-1"></i> Back to Lessons
+            </a>
+            <h1 class="h3 mb-0">{{ $lesson->title }}</h1>
+        </div>
 
-<!-- Lesson Header -->
-<div class="card shadow mb-4 border-left-primary">
-    <div class="card-body">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h2 class="mb-3">{{ $lesson->title }}</h2>
-                <div class="mb-2">
-                    <span class="badge badge-primary badge-lg mr-2">
-                        <i class="fas fa-book mr-1"></i>{{ $lesson->subject->subject_code }}
-                    </span>
-                    <span class="badge badge-info badge-lg mr-2">
-                        <i class="fas fa-graduation-cap mr-1"></i>{{ $lesson->subject->course->course_name }}
-                    </span>
-                    <span class="badge badge-secondary badge-lg">
-                        <i class="fas fa-layer-group mr-1"></i>Year {{ $lesson->subject->year_level }}
-                    </span>
-                </div>
-                <p class="text-muted mb-0 mt-3">
-                    <i class="fas fa-user mr-2"></i>
-                    <strong>Instructor:</strong> {{ $lesson->instructor->full_name }}
-                </p>
-                <p class="text-muted mb-0">
-                    <i class="fas fa-calendar mr-2"></i>
-                    <strong>Published:</strong> {{ $lesson->published_at->format('F d, Y \a\t h:i A') }}
-                </p>
-                <p class="text-muted mb-0">
-                    <i class="fas fa-eye mr-2"></i>
-                    <strong>Views:</strong> {{ $viewCount }}
-                </p>
-            </div>
-            <div class="col-md-4 text-right">
-                @if($lesson->hasFile())
-                <a href="{{ route('student.lessons.download', $lesson) }}" class="btn btn-download btn-lg mb-2">
-                    <i class="fas fa-download mr-2"></i>Download {{ Str::upper($lesson->file_type ?? 'File') }}
+        <!-- Download Dropdown -->
+        @if($lesson->visibleAttachments->isNotEmpty())
+        <div class="dropdown">
+            <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">
+                <i class="fas fa-download mr-1"></i> Download Files
+            </button>
+            <div class="dropdown-menu dropdown-menu-right">
+                @foreach($lesson->visibleAttachments as $attachment)
+                <a class="dropdown-item" href="{{ route('student.lessons.attachments.download', [$lesson, $attachment]) }}">
+                    <i class="fas fa-file mr-2"></i>{{ Str::limit($attachment->original_filename, 40) }}
                 </a>
-                <p class="text-muted small mb-0">
-                    <i class="fas fa-file mr-1"></i>Downloadable resource available
-                </p>
+                @endforeach
+                @if($lesson->visibleAttachments->count() > 1)
+                <div class="dropdown-divider"></div>
+                <form action="{{ route('student.lessons.attachments.download-all', $lesson) }}" method="POST">
+                    @csrf
+                    <button type="submit" class="dropdown-item text-success">
+                        <i class="fas fa-cloud-download-alt mr-2"></i>Download All
+                    </button>
+                </form>
                 @endif
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Lesson Content -->
-<div class="row">
-    <div class="col-lg-8">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">
-                    <i class="fas fa-book-open mr-2"></i>Lesson Content
-                </h6>
-            </div>
-            <div class="card-body lesson-content">
-                @if($lesson->content)
-                    {!! nl2br(e($lesson->content)) !!}
-                @else
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle mr-2"></i>
-                        No text content available. Please download the file to view the lesson material.
-                    </div>
-                @endif
-            </div>
-        </div>
-
-        <!-- Embedded File Preview (PDF) -->
-        @if($lesson->hasFile() && $lesson->file_type === 'pdf')
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">
-                    <i class="fas fa-file-pdf mr-2"></i>File Preview
-                </h6>
-            </div>
-            <div class="card-body p-0">
-                <iframe src="{{ $lesson->file_url }}" width="100%" height="600px" style="border: none;"></iframe>
             </div>
         </div>
         @endif
-
-        <!-- Action Buttons -->
-        <div class="card shadow mb-4">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <a href="{{ route('student.lessons.index') }}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left mr-2"></i>Back to Lessons
-                    </a>
-                    <div>
-                        <a href="{{ route('student.feedback.create', ['type' => 'lesson', 'id' => $lesson->id]) }}" 
-                           class="btn btn-outline-primary">
-                            <i class="fas fa-comment-dots mr-2"></i>Give Feedback
-                        </a>
-                        @if($lesson->hasFile())
-                        <a href="{{ route('student.lessons.download', $lesson) }}" class="btn btn-primary">
-                            <i class="fas fa-download mr-2"></i>Download
-                        </a>
-                        @endif
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
-    <!-- Sidebar -->
-    <div class="col-lg-4">
-        <!-- Subject Information -->
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">
-                    <i class="fas fa-info-circle mr-2"></i>Subject Information
-                </h6>
-            </div>
-            <div class="card-body">
-                <h6 class="font-weight-bold">{{ $lesson->subject->subject_name }}</h6>
-                <p class="text-muted small mb-2">{{ $lesson->subject->subject_code }}</p>
-                
-                @if($lesson->subject->description)
-                <p class="text-muted small">{{ $lesson->subject->description }}</p>
-                @endif
-                
-                <hr>
-                
-                <p class="mb-2"><strong>Course:</strong><br><span class="text-muted">{{ $lesson->subject->course->course_name }}</span></p>
-                <p class="mb-2"><strong>Year Level:</strong><br><span class="text-muted">Year {{ $lesson->subject->year_level }}</span></p>
-                <p class="mb-0"><strong>Units:</strong><br><span class="text-muted">{{ $lesson->subject->units }} unit(s)</span></p>
-            </div>
-        </div>
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Lesson Info -->
+            <div class="card shadow-sm mb-4 border-left-primary">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <img src="{{ $lesson->instructor->avatar ?? 'https://ui-avatars.com/api/?name=' . urlencode($lesson->instructor->name) }}"
+                             alt="{{ $lesson->instructor->name }}"
+                             class="rounded-circle mr-3"
+                             width="50" height="50">
+                        <div>
+                            <h6 class="mb-0">{{ $lesson->instructor->name }}</h6>
+                            <small class="text-muted">Instructor</small>
+                        </div>
+                        <div class="ml-auto">
+                            <span class="badge badge-{{ $lesson->status === 'published' ? 'success' : 'warning' }}">
+                                {{ ucfirst($lesson->status) }}
+                            </span>
+                        </div>
+                    </div>
 
-        <!-- Related Lessons -->
-        @if($relatedLessons->count() > 0)
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">
-                    <i class="fas fa-list mr-2"></i>Related Lessons
-                </h6>
+                    <div class="row text-center border-top pt-3 mb-3">
+                        <div class="col-4">
+                            <i class="fas fa-book-reader text-primary fa-lg"></i>
+                            <p class="mb-0 mt-2"><small class="text-muted">Subject</small></p>
+                            <p class="mb-0"><strong>{{ $lesson->subject->subject_code }}</strong></p>
+                        </div>
+                        <div class="col-4">
+                            <i class="fas fa-layer-group text-success fa-lg"></i>
+                            <p class="mb-0 mt-2"><small class="text-muted">Course</small></p>
+                            <p class="mb-0"><strong>{{ $lesson->subject->course->course_name }}</strong></p>
+                        </div>
+                        <div class="col-4">
+                            <i class="fas fa-calendar text-info fa-lg"></i>
+                            <p class="mb-0 mt-2"><small class="text-muted">Published</small></p>
+                            <p class="mb-0"><strong>{{ $lesson->published_at->format('M d, Y') }}</strong></p>
+                        </div>
+                    </div>
+
+                    @if($lesson->description)
+                    <div class="border-top pt-3">
+                        <h5 class="mb-3">Description</h5>
+                        <div class="text-muted">{!! nl2br(e($lesson->description)) !!}</div>
+                    </div>
+                    @endif
+                </div>
             </div>
-            <div class="card-body p-0">
+
+            <!-- Lesson Content -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-file-alt mr-2 text-primary"></i>Lesson Content</h5>
+                </div>
+                <div class="card-body lesson-content">
+                    @if($lesson->content)
+                        {!! nl2br(e($lesson->content)) !!}
+                    @else
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle mr-2"></i>No text content available.
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <!-- PDF Preview -->
+            @if($lesson->hasFile() && $lesson->file_type === 'pdf')
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-file-pdf mr-2 text-danger"></i>File Preview</h5>
+                </div>
+                <div class="card-body p-0">
+                    <iframe src="{{ $lesson->file_url }}" width="100%" height="600px" style="border: none;"></iframe>
+                </div>
+            </div>
+            @endif
+
+            <!-- Related Lessons -->
+            @if($relatedLessons->count() > 0)
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-list mr-2 text-info"></i>Related Lessons</h5>
+                </div>
                 <div class="list-group list-group-flush">
                     @foreach($relatedLessons as $relatedLesson)
-                    <a href="{{ route('student.lessons.show', $relatedLesson) }}" 
-                       class="list-group-item list-group-item-action">
-                        <div class="d-flex w-100 justify-content-between align-items-start">
+                    <a href="{{ route('student.lessons.show', $relatedLesson) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex justify-content-between align-items-center">
                             <div>
-                                <h6 class="mb-1">{{ Str::limit($relatedLesson->title, 40) }}</h6>
-                                <small class="text-muted">
+                                <strong>{{ Str::limit($relatedLesson->title, 40) }}</strong>
+                                <small class="text-muted d-block">
                                     <i class="fas fa-calendar mr-1"></i>{{ $relatedLesson->published_at->format('M d, Y') }}
                                 </small>
                             </div>
@@ -167,104 +140,100 @@
                     @endforeach
                 </div>
             </div>
-        </div>
-        @endif
+            @endif
 
-        <!-- Quick Actions -->
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-bolt mr-2"></i>Quick Actions</h6>
+            <!-- Action Buttons -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <a href="{{ route('student.lessons.index') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left mr-2"></i>Back
+                    </a>
+                    <div>
+                        <button id="markCompletedBtn" class="btn btn-success mr-2">
+                            <i class="fas fa-check-circle mr-2"></i>Mark Completed
+                        </button>
+                        <button class="btn btn-outline-info mr-2" onclick="shareLesson()">
+                            <i class="fas fa-share-alt mr-2"></i>Share
+                        </button>
+                        <a href="{{ route('student.feedback.create', ['type' => 'lesson', 'id' => $lesson->id]) }}" class="btn btn-outline-warning">
+                            <i class="fas fa-comment mr-2"></i>Feedback
+                        </a>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <a href="{{ route('student.lessons.index', ['subject_id' => $lesson->subject_id]) }}" 
-                   class="btn btn-outline-primary btn-block mb-2"><i class="fas fa-list mr-2"></i>All Lessons in This Subject</a>
-                <a href="{{ route('student.quizzes.index', ['subject_id' => $lesson->subject_id]) }}" 
-                   class="btn btn-outline-success btn-block mb-2"><i class="fas fa-clipboard-list mr-2"></i>View Quizzes</a>
-                <button type="button" class="btn btn-outline-secondary btn-block" onclick="window.print()">
-                    <i class="fas fa-print mr-2"></i>Print Lesson
-                </button>
-            </div>
         </div>
-    </div>
-</div>
 
-@if($lesson->visibleAttachments->isNotEmpty())
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">
-                <i class="bi bi-paperclip me-2"></i>
-                Lesson Attachments
-                <span class="badge bg-light text-dark ms-2">{{ $lesson->visibleAttachments->count() }}</span>
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="row g-3">
-                @foreach($lesson->visibleAttachments as $attachment)
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card h-100 border {{ $attachment->hasBeenDownloadedBy(auth()->id()) ? 'border-success' : '' }}">
-                            <div class="card-body">
-                                <div class="d-flex align-items-start mb-3">
-                                    <div class="flex-shrink-0">
-                                        <i class="bi {{ $attachment->file_icon }} fs-1"></i>
-                                    </div>
-                                    <div class="flex-grow-1 ms-3">
-                                        <h6 class="mb-1">{{ Str::limit($attachment->original_filename, 30) }}</h6>
-                                        <small class="text-muted">{{ $attachment->formatted_file_size }}</small>
-                                        
-                                        @if($attachment->hasBeenDownloadedBy(auth()->id()))
-                                            <div class="mt-2">
-                                                <span class="badge bg-success">
-                                                    <i class="bi bi-check-circle me-1"></i>Downloaded
-                                                </span>
-                                            </div>
-                                        @endif
-                                    </div>
-                                </div>
-
-                                @if($attachment->description)
-                                    <p class="small text-muted mb-3">{{ $attachment->description }}</p>
-                                @endif
-
-                                <div class="d-grid gap-2">
-                                    @if($attachment->isImage() || $attachment->file_extension === 'pdf')
-                                        <a href="{{ route('student.lessons.attachments.view', [$lesson, $attachment]) }}" 
-                                           class="btn btn-outline-primary btn-sm"
-                                           target="_blank">
-                                            <i class="bi bi-eye me-1"></i>View
-                                        </a>
-                                    @endif
-                                    
-                                    <a href="{{ route('student.lessons.attachments.download', [$lesson, $attachment]) }}" 
-                                       class="btn btn-primary btn-sm">
-                                        <i class="bi bi-download me-1"></i>Download
-                                    </a>
-                                </div>
-
-                                <div class="mt-2 text-center">
-                                    <small class="text-muted">
-                                        <i class="bi bi-download me-1"></i>{{ $attachment->download_count }} downloads
-                                    </small>
-                                </div>
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Attachments -->
+            @if($lesson->visibleAttachments->isNotEmpty())
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-paperclip mr-2 text-warning"></i>Attachments</h5>
+                </div>
+                <div class="card-body">
+                    @foreach($lesson->visibleAttachments as $attachment)
+                    <div class="mb-3 p-2 border rounded {{ $attachment->hasBeenDownloadedBy(auth()->id()) ? 'border-success' : 'border-secondary' }}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-file mr-2 text-primary"></i>{{ Str::limit($attachment->original_filename, 30) }}
                             </div>
+                            <small class="text-muted">{{ $attachment->formatted_file_size }}</small>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <div>
+                                @if($attachment->isImage() || $attachment->file_extension === 'pdf')
+                                    <a href="{{ route('student.lessons.attachments.view', [$lesson, $attachment]) }}" target="_blank" class="btn btn-outline-primary btn-sm mr-2">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                @endif
+                                <a href="{{ route('student.lessons.attachments.download', [$lesson, $attachment]) }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-download"></i> Download
+                                </a>
+                            </div>
+                            <small class="text-muted"><i class="fas fa-download mr-1"></i>{{ $attachment->download_count }} downloads</small>
                         </div>
                     </div>
-                @endforeach
-            </div>
-
-            @if($lesson->visibleAttachments->count() > 1)
-                <div class="mt-4 text-center">
-                    <form action="{{ route('student.lessons.attachments.download-all', $lesson) }}" method="POST" class="d-inline">
-                        @csrf
-                        <button type="submit" class="btn btn-success">
-                            <i class="bi bi-cloud-arrow-down me-2"></i>
-                            Download All ({{ $lesson->formatted_attachment_size }})
-                        </button>
-                    </form>
+                    @endforeach
                 </div>
+            </div>
+            @endif
+
+            <!-- Quiz Progress -->
+            @if($lesson->quizzes->count() > 0)
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-clipboard-list mr-2 text-success"></i>Related Quizzes</h5>
+                </div>
+                <div class="card-body">
+                    @php
+                        $completedQuizzes = $lesson->quizzes->filter(function($quiz) {
+                            return $quiz->attempts->where('user_id', auth()->id())->where('status', 'completed')->count() > 0;
+                        })->count();
+                        $totalQuizzes = $lesson->quizzes->count();
+                        $progressPercent = $totalQuizzes > 0 ? round(($completedQuizzes / $totalQuizzes) * 100) : 0;
+                    @endphp
+                    <div class="text-center mb-3">
+                        <div class="display-4 text-primary">{{ $progressPercent }}%</div>
+                        <p class="text-muted mb-0">Completion Rate</p>
+                    </div>
+                    <div class="progress mb-3" style="height: 10px;">
+                        <div class="progress-bar bg-success" style="width: {{ $progressPercent }}%"></div>
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        @foreach($lesson->quizzes as $quiz)
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <span>{{ $quiz->title }}</span>
+                            <a href="{{ route('student.quizzes.show', $quiz) }}" class="btn btn-sm btn-outline-success">Take</a>
+                        </li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
             @endif
         </div>
     </div>
-@endif
+</div>
 @endsection
 
 @push('styles')
@@ -279,14 +248,8 @@
 .lesson-content code { background-color:#f8f9fa; padding:2px 6px; border-radius:3px; font-family:'Courier New', monospace; font-size:0.9em; color:#e83e8c; }
 .lesson-content pre { background-color:#f8f9fa; border:1px solid #dee2e6; border-radius:5px; padding:1rem; overflow-x:auto; margin:1rem 0; }
 .lesson-content pre code { background-color:transparent; padding:0; color:#333; }
-.lesson-content table { width:100%; margin-bottom:1rem; border-collapse:collapse; }
-.lesson-content table th, .lesson-content table td { padding:0.75rem; border:1px solid #dee2e6; }
-.lesson-content table thead th { background-color:#36b9cc; color:white; font-weight:600; }
-.lesson-content a { color:#36b9cc; text-decoration:underline; }
-.lesson-content a:hover { color:#2c9faf; }
 @media print {
-    .sidebar, .breadcrumb, .btn, .card-header, .no-print { display:none !important; }
-    .col-lg-8 { width:100%; max-width:100%; }
+    .btn, .card-header, nav, .sidebar, .dropdown { display:none !important; }
     .card { border:none; box-shadow:none !important; }
 }
 </style>
@@ -295,19 +258,11 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // Smooth scroll for anchor links
-    $('a[href="#"]').click(function(e) {
-        e.preventDefault();
-        $('html, body').animate({ scrollTop: 0 }, 'smooth');
-    });
-
-    // Study time tracking
     let viewId = null;
-    let startTime = Date.now();
     let studySeconds = 0;
     let updateInterval;
 
-    // Track initial view
+    // Track lesson view
     $.ajax({
         url: '{{ route("student.lessons.track-view", $lesson) }}',
         method: 'POST',
@@ -321,40 +276,29 @@ $(document).ready(function() {
     });
 
     function startTracking() {
-        updateInterval = setInterval(function() {
+        updateInterval = setInterval(() => {
             studySeconds++;
-            const minutes = Math.floor(studySeconds / 60);
-            const seconds = studySeconds % 60;
-            $('#studyTime').text(minutes + 'm ' + seconds + 's');
-
-            if(studySeconds % 30 === 0) {
-                updateDuration();
-            }
+            if(studySeconds % 30 === 0) updateDuration();
         }, 1000);
     }
 
     function updateDuration() {
         if(viewId) {
-            $.ajax({
-                url: '{{ route("student.lessons.update-duration", $lesson) }}',
-                method: 'POST',
-                data: { _token: '{{ csrf_token() }}', view_id: viewId, duration: studySeconds }
+            $.post('{{ route("student.lessons.update-duration", $lesson) }}', {
+                _token: '{{ csrf_token() }}',
+                view_id: viewId,
+                duration: studySeconds
             });
         }
     }
 
     $('#markCompletedBtn').click(function() {
         if(confirm('Mark this lesson as completed?')) {
-            $.ajax({
-                url: '{{ route("student.lessons.mark-completed", $lesson) }}',
-                method: 'POST',
-                data: { _token: '{{ csrf_token() }}' },
-                success: function(response) {
-                    if(response.success) {
-                        $('#markCompletedBtn').replaceWith(
-                            '<span class="badge badge-success"><i class="fas fa-check-circle"></i> Completed</span>'
-                        );
-                    }
+            $.post('{{ route("student.lessons.mark-completed", $lesson) }}', {
+                _token: '{{ csrf_token() }}'
+            }, function(response) {
+                if(response.success) {
+                    $('#markCompletedBtn').replaceWith('<span class="badge badge-success"><i class="fas fa-check-circle"></i> Completed</span>');
                 }
             });
         }
@@ -374,5 +318,14 @@ $(document).ready(function() {
         }
     });
 });
+
+function shareLesson() {
+    const url = window.location.href;
+    if (navigator.share) {
+        navigator.share({ title: '{{ $lesson->title }}', url: url });
+    } else {
+        navigator.clipboard.writeText(url).then(() => alert('Lesson link copied to clipboard!'));
+    }
+}
 </script>
 @endpush

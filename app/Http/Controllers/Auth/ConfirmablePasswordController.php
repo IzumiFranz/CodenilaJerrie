@@ -24,8 +24,9 @@ class ConfirmablePasswordController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Use username instead of email
         if (! Auth::guard('web')->validate([
-            'email' => $request->user()->email,
+            'username' => $request->user()->username,
             'password' => $request->password,
         ])) {
             throw ValidationException::withMessages([
@@ -35,6 +36,8 @@ class ConfirmablePasswordController extends Controller
 
         $request->session()->put('auth.password_confirmed_at', time());
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        // Redirect to role-specific dashboard
+        $role = $request->user()->role;
+        return redirect()->intended(route($role . '.dashboard'));
     }
 }

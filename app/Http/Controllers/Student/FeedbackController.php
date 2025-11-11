@@ -20,7 +20,30 @@ class FeedbackController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        return view('student.feedback.index', compact('feedback'));
+        // Gather counts for stats cards
+        $totalFeedback = $feedback->total();
+        $pendingFeedback = $feedback->where('status', 'pending')->count();
+        $respondedFeedback = $feedback->where('status', 'responded')->count();
+        $averageRating = $feedback->avg('rating') ?? 0;
+
+        // Include quizzes, lessons, instructors for the form
+        $quizzes = Quiz::all();
+        $lessons = Lesson::all();
+        $instructors = User::where('role', 'instructor')->get();
+
+        // Determine if we need to open the submit tab (if validation fails)
+        $openSubmitTab = session()->getOldInput() ? true : false;
+        return view('student.feedback.index', compact(
+            'feedback', 
+            'totalFeedback', 
+            'pendingFeedback', 
+            'respondedFeedback', 
+            'averageRating',
+            'quizzes',
+            'lessons',
+            'instructors',
+            'openSubmitTab'
+        ));
     }
 
     public function create(Request $request)
@@ -43,34 +66,44 @@ class FeedbackController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'feedbackable_type' => ['nullable', 'in:App\Models\Quiz,App\Models\Lesson'],
-            'feedbackable_id' => ['nullable', 'integer'],
+            'type' => ['required', 'in:quiz,lesson,instructor,general'],
+            'quiz_id' => ['nullable', 'integer'],
+            'lesson_id' => ['nullable', 'integer'],
+            'instructor_id' => ['nullable', 'integer'],
             'rating' => ['nullable', 'integer', 'min:1', 'max:5'],
-            'comment' => ['required', 'string', 'max:2000'],
+            'subject' => ['required', 'string', 'max:255'],
+            'message' => ['required', 'string', 'min:20', 'max:2000'],
+            'is_anonymous' => ['nullable', 'boolean'],
         ]);
-
+    
         try {
             $feedback = Feedback::create([
                 'user_id' => auth()->id(),
-                'feedbackable_type' => $validated['feedbackable_type'] ?? null,
-                'feedbackable_id' => $validated['feedbackable_id'] ?? null,
+                'feedbackable_type' => match($validated['type'] ?? 'general') {
+                    'quiz' => Quiz::class,
+                    'lesson' => Lesson::class,
+                    'instructor' => null, // adjust if needed
+                    default => null,
+                },
+                'feedbackable_id' => $validated['quiz_id'] ?? $validated['lesson_id'] ?? $validated['instructor_id'] ?? null,
                 'rating' => $validated['rating'] ?? null,
-                'comment' => $validated['comment'],
+                'subject' => $validated['subject'],
+                'message' => $validated['message'],
+                'is_anonymous' => $validated['is_anonymous'] ?? false,
                 'status' => 'pending',
             ]);
-
+    
             AuditLog::log('feedback_submitted', $feedback);
-
-            return redirect()
-                ->route('student.feedback.index')
+    
+            return redirect()->route('student.feedback.index')
                 ->with('success', 'Thank you for your feedback!');
-
+    
         } catch (\Exception $e) {
-            return back()
-                ->withInput()
+            return back()->withInput()
                 ->with('error', 'Failed to submit feedback: ' . $e->getMessage());
         }
     }
+    
 
     public function show(Feedback $feedback)
     {

@@ -265,7 +265,13 @@ class LessonController extends Controller
             }
             
             if ($settings->notification_lesson_published) {
-                Notification::create([...]);
+                Notification::create([
+                    'user_id' => $student->user->id,
+                    'type' => 'info',
+                    'title' => 'New Lesson Published',
+                    'message' => "A new lesson titled '{$lesson->title}' has been published in your course '{$lesson->course->title}'.",
+                    'action_url' => route('student.courses.show', $lesson->course_id),
+                ]);
             }
             
             $status = $lesson->is_published ? 'published' : 'unpublished';

@@ -70,6 +70,36 @@
         .scrollable-hidden-scrollbar::-webkit-scrollbar {
             display: none; /* For Chrome, Safari, and Opera */
         }
+        /* Smooth scrolling */
+        #content-wrapper, #accordionSidebar {
+            scroll-behavior: smooth;
+        }
+
+        /* Hide scrollbars but allow scrolling */
+        #content-wrapper::-webkit-scrollbar,
+        #accordionSidebar::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+        }
+
+        #content-wrapper,
+        #accordionSidebar {
+            -ms-overflow-style: none;  /* IE/Edge */
+            scrollbar-width: thin;     /* Firefox */
+        }
+
+        /* Optional: hover to show a thin scrollbar */
+        #content-wrapper:hover::-webkit-scrollbar,
+        #accordionSidebar:hover::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #content-wrapper::-webkit-scrollbar-thumb,
+        #accordionSidebar::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.2);
+            border-radius: 3px;
+        }
+
         @keyframes wave {
             0% { transform: translateX(0); }
             100% { transform: translateX(-50%); }
@@ -400,9 +430,9 @@
                 </div>
                 <div class="col-md-4">
                     <h5 class="mb-3">Contact</h5>
-                    <p class="text-white-50 mb-2"><i class="fas fa-envelope mr-2"></i>support@quizlms.com</p>
-                    <p class="text-white-50 mb-2"><i class="fas fa-phone mr-2"></i>+1 (555) 123-4567</p>
-                    <p class="text-white-50"><i class="fas fa-map-marker-alt mr-2"></i>123 Education St, Learning City</p>
+                    <p class="text-white-50 mb-2"><i class="fas fa-envelope mr-2"></i>quizlms.edu@gmail.com</p>
+                    <p class="text-white-50 mb-2"><i class="fas fa-phone mr-2"></i>(+63) 936 - 617 - 4944</p>
+                    <p class="text-white-50"><i class="fas fa-map-marker-alt mr-2"></i>Bulihan, City of Malolos, Bulacan, Philippines</p>
                 </div>
             </div>
             <hr class="my-4" style="border-color: rgba(255,255,255,0.1);">

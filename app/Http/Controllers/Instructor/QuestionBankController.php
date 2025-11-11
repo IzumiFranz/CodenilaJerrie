@@ -552,6 +552,4 @@ class QuestionBankController extends Controller
             return back()->with('error', 'Failed to generate template: ' . $e->getMessage());
         }
     }
-    
-
 }

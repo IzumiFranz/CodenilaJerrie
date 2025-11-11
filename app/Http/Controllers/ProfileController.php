@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -63,19 +64,25 @@ class ProfileController extends Controller
                 'email' => $user->email,
             ];
 
-            // Update user email
-            $user->email = $validated['email'];
-            $user->save();
+            // Update profile
+        $profileData = [
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
+            'middle_name' => $validated['middle_name'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+        ];
 
-            // Update profile based on role
-            if ($profile) {
-                $profileData = array_intersect_key($validated, array_flip([
-                    'first_name', 'last_name', 'middle_name', 'phone', 'position', 
-                    'office', 'department', 'address'
-                ]));
-                
-                $profile->update($profileData);
+            // Add role-specific data
+            if ($user->isAdmin()) {
+                $profileData['position'] = $validated['position'] ?? null;
+                $profileData['office'] = $validated['office'] ?? null;
+            } elseif ($user->isInstructor()) {
+                $profileData['department'] = $validated['department'] ?? null;
+            } elseif ($user->isStudent()) {
+                $profileData['address'] = $validated['address'] ?? null;
             }
+
+            $profile->update($profileData);
 
             // Log the update
             AuditLog::log('profile_updated', $user, $oldValues, ['email' => $user->email]);
@@ -97,36 +104,51 @@ class ProfileController extends Controller
     /**
      * Update the user's password.
      */
-    public function updatePassword(Request $request)
+    public function updatePassword(Request $request): RedirectResponse
     {
-        $user = $request->user();
+        $rules = [
+            'password' => [
+                'required',
+                'confirmed',
+                Password::min(8)
+                    ->mixedCase()
+                    ->numbers()
+            ],
+        ];
 
-        $validated = $request->validate([
-            'current_password' => ['required_if:must_change,false', 'current_password'],
-            'password' => ['required', 'confirmed', Password::defaults()],
+        // Only require current password if not forced to change
+        if (!$request->user()->must_change_password) {
+            $rules['current_password'] = ['required', 'current_password'];
+        }
+
+        $validated = $request->validate($rules, [
+            'password.min' => 'Password must be at least 8 characters.',
+            'password.mixed_case' => 'Password must contain both uppercase and lowercase letters.',
+            'password.numbers' => 'Password must contain at least one number.',
+            'current_password.current_password' => 'The current password is incorrect.',
         ]);
 
-        try {
-            $user->password = Hash::make($validated['password']);
-            $user->must_change_password = false;
-            $user->save();
+        // Update password
+        $request->user()->update([
+            'password' => Hash::make($validated['password']),
+            'must_change_password' => false,
+        ]);
 
-            // Log password change
-            AuditLog::log('password_changed', $user);
+        // Log the password change
+        \App\Models\AuditLog::log(
+            'password_changed',
+            $request->user(),
+            [],
+            [
+                'changed_via' => 'profile',
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent()
+            ]
+        );
 
-            // Determine redirect based on role
-            $redirectRoute = match($user->role) {
-                'admin' => 'admin.dashboard',
-                'instructor' => 'instructor.dashboard',
-                'student' => 'student.dashboard',
-                default => 'home',
-            };
-
-            return redirect()->route($redirectRoute)
-                ->with('success', 'Password changed successfully.');
-        } catch (\Exception $e) {
-            return back()->with('error', 'Failed to change password: ' . $e->getMessage());
-        }
+        return redirect()
+            ->route($request->user()->role . '.dashboard')
+            ->with('status', 'Password changed successfully!');
     }
 
     /**
@@ -141,8 +163,7 @@ class ProfileController extends Controller
         try {
             $user = $request->user();
 
-            // Delete old avatar if exists
-            if ($user->profile_picture) {
+            if ($user->profile_picture && Storage::disk('public')->exists($user->profile_picture)) {
                 Storage::disk('public')->delete($user->profile_picture);
             }
 
@@ -170,9 +191,13 @@ class ProfileController extends Controller
             $user = $request->user();
 
             if ($user->profile_picture) {
-                Storage::disk('public')->delete($user->profile_picture);
-                $user->profile_picture = null;
-                $user->save();
+                // Delete from storage
+                if (Storage::disk('public')->exists($user->profile_picture)) {
+                    Storage::disk('public')->delete($user->profile_picture);
+                }
+                $user->update([
+                    'profile_picture' => null
+                ]);
 
                 // Log avatar deletion
                 AuditLog::log('avatar_deleted', $user);
@@ -189,7 +214,7 @@ class ProfileController extends Controller
     /**
      * Delete the user's account.
      */
-    public function destroy(Request $request)
+    public function destroy(Request $request): RedirectResponse
     {
         $request->validateWithBag('userDeletion', [
             'password' => ['required', 'current_password'],
@@ -197,8 +222,16 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        // Log account deletion
-        AuditLog::log('account_deleted', $user);
+        // Log before deletion
+        \App\Models\AuditLog::log(
+            'account_deleted',
+            $user,
+            [],
+            [
+                'deleted_by' => 'self',
+                'ip_address' => $request->ip()
+            ]
+        );
 
         Auth::logout();
 
@@ -207,6 +240,7 @@ class ProfileController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/')->with('success', 'Your account has been deleted.');
+        return redirect('/')
+            ->with('status', 'Your account has been deleted successfully.');
     }
 }

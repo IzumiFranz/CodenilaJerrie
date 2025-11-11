@@ -10,26 +10,34 @@ class UserTable extends Component
 {
     use WithPagination;
 
+    protected $paginationTheme = 'bootstrap';
+
     public $search = '';
-    public $role = '';
-    public $status = '';
+    public $roleFilter = '';
+    public $statusFilter = '';
     public $sortBy = 'created_at';
     public $sortOrder = 'desc';
     public $perPage = 20;
 
-    protected $paginationTheme = 'bootstrap';
+    protected $queryString = [
+        'search' => ['except' => ''],
+        'roleFilter' => ['except' => ''],
+        'statusFilter' => ['except' => ''],
+        'sortBy' => ['except' => 'created_at'],
+        'sortOrder' => ['except' => 'desc'],
+    ];
 
     public function updatingSearch()
     {
         $this->resetPage();
     }
 
-    public function updatingRole()
+    public function updatingRoleFilter()
     {
         $this->resetPage();
     }
 
-    public function updatingStatus()
+    public function updatingStatusFilter()
     {
         $this->resetPage();
     }
@@ -44,28 +52,59 @@ class UserTable extends Component
         }
     }
 
+    public function clearFilters()
+    {
+        $this->search = '';
+        $this->roleFilter = '';
+        $this->statusFilter = '';
+        $this->sortBy = 'created_at';
+        $this->sortOrder = 'desc';
+        $this->resetPage();
+    }
+
     public function render()
     {
         $query = User::with('profile');
 
+        // Search
         if ($this->search) {
             $query->where(function($q) {
                 $q->where('username', 'like', "%{$this->search}%")
-                  ->orWhere('email', 'like', "%{$this->search}%");
+                  ->orWhere('email', 'like', "%{$this->search}%")
+                  ->orWhereHas('admin', function($q) {
+                      $q->where('first_name', 'like', "%{$this->search}%")
+                        ->orWhere('last_name', 'like', "%{$this->search}%");
+                  })
+                  ->orWhereHas('instructor', function($q) {
+                      $q->where('first_name', 'like', "%{$this->search}%")
+                        ->orWhere('last_name', 'like', "%{$this->search}%")
+                        ->orWhere('employee_id', 'like', "%{$this->search}%");
+                  })
+                  ->orWhereHas('student', function($q) {
+                      $q->where('first_name', 'like', "%{$this->search}%")
+                        ->orWhere('last_name', 'like', "%{$this->search}%")
+                        ->orWhere('student_number', 'like', "%{$this->search}%");
+                  });
             });
         }
 
-        if ($this->role) {
-            $query->where('role', $this->role);
+        // Role Filter
+        if ($this->roleFilter) {
+            $query->where('role', $this->roleFilter);
         }
 
-        if ($this->status) {
-            $query->where('status', $this->status);
+        // Status Filter
+        if ($this->statusFilter) {
+            $query->where('status', $this->statusFilter);
         }
 
-        $users = $query->orderBy($this->sortBy, $this->sortOrder)
-                      ->paginate($this->perPage);
+        // Sorting
+        $query->orderBy($this->sortBy, $this->sortOrder);
 
-        return view('livewire.user-table', compact('users'));
+        $users = $query->paginate($this->perPage);
+
+        return view('livewire.user-table', [
+            'users' => $users,
+        ]);
     }
 }

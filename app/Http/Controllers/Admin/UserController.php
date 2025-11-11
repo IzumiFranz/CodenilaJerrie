@@ -19,6 +19,8 @@ use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
+    use GeneratesUsername;
+
     /**
      * Display a listing of users
      */
@@ -101,7 +103,7 @@ class UserController extends Controller
             DB::beginTransaction();
 
             // Generate username and password
-            $username = $this->generateUsername($validated['first_name'], $validated['last_name']);
+            $username = $this->generateUsername($validated['role']);
             $password = Str::random(12);
 
             // Create user
@@ -113,6 +115,31 @@ class UserController extends Controller
                 'status' => 'active',
                 'must_change_password' => true,
             ]);
+
+            if ($user->isAdmin()) {
+                Admin::create([
+                    'user_id' => $user->id,
+                    'first_name' => $validated['first_name'],
+                    'last_name' => $validated['last_name'],
+                    'middle_name' => $validated['middle_name'] ?? null,
+                ]);
+            } elseif ($user->isInstructor()) {
+                Instructor::create([
+                    'user_id' => $user->id,
+                    'employee_id' => $this->generateEmployeeId(),
+                    'first_name' => $validated['first_name'],
+                    'last_name' => $validated['last_name'],
+                    'middle_name' => $validated['middle_name'] ?? null,
+                ]);
+            } else {
+                Student::create([
+                    'user_id' => $user->id,
+                    'student_number' => $this->generateStudentNumber(),
+                    'first_name' => $validated['first_name'],
+                    'last_name' => $validated['last_name'],
+                    'middle_name' => $validated['middle_name'] ?? null,
+                ]);
+            }
 
             // Create role-specific profile
             switch ($validated['role']) {
@@ -181,6 +208,27 @@ class UserController extends Controller
                 ->with('error', 'Failed to create user: ' . $e->getMessage());
         }
     }
+
+    private function generateEmployeeId(): string
+    {
+        $year = date('Y');
+        
+        $lastInstructor = Instructor::where('employee_id', 'like', 'EMP-' . $year . '-%')
+            ->orderBy('id', 'desc')
+            ->first();
+        
+        if ($lastInstructor) {
+            preg_match('/-(\d+)$/', $lastInstructor->employee_id, $matches);
+            $lastNumber = isset($matches[1]) ? (int)$matches[1] : 0;
+            $nextNumber = $lastNumber + 1;
+        } else {
+            $nextNumber = 1;
+        }
+        
+        $sequence = str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+        return 'EMP-' . $year . '-' . $sequence;
+    }
+}
 
     /**
      * Display the specified user
@@ -413,7 +461,7 @@ class UserController extends Controller
                     $data = array_combine($headers, $row);
                     
                     // Generate credentials
-                    $username = $this->generateUsername($data['first_name'], $data['last_name']);
+                    $username = $this->generateUsername($role);
                     $password = Str::random(12);
 
                     // Create user
@@ -426,14 +474,37 @@ class UserController extends Controller
                         'must_change_password' => true,
                     ]);
 
-                    // Create profile based on role
-                    $this->createProfile($user, $role, $data);
+                    // Create role-specific profile with name from CSV
+                    if ($role === 'student') {
+                        Student::create([
+                            'user_id' => $user->id,
+                            'student_number' => $this->generateStudentNumber(),
+                            'first_name' => $data['first_name'],
+                            'last_name' => $data['last_name'],
+                            'middle_name' => $data['middle_name'] ?? null,
+                        ]);
+                    } elseif ($role === 'instructor') {
+                        Instructor::create([
+                            'user_id' => $user->id,
+                            'employee_id' => $this->generateEmployeeId(),
+                            'first_name' => $data['first_name'],
+                            'last_name' => $data['last_name'],
+                            'middle_name' => $data['middle_name'] ?? null,
+                        ]);
+                    } else {
+                        Admin::create([
+                            'user_id' => $user->id,
+                            'first_name' => $data['first_name'],
+                            'last_name' => $data['last_name'],
+                            'middle_name' => $data['middle_name'] ?? null,
+                        ]);
+                    }
 
                     $created[] = [
                         'username' => $username,
                         'email' => $data['email'],
                         'password' => $password,
-                        'name' => $data['first_name'] . ' ' . $data['last_name'],
+                        'name' => trim($data['first_name'] . ' ' . $data['last_name']),
                     ];
 
                 } catch (\Exception $e) {
@@ -493,20 +564,45 @@ class UserController extends Controller
     /**
      * Generate unique username
      */
-    private function generateUsername(string $firstName, string $lastName): string
+    private function generateUsername(string $role): string
     {
-        $base = strtolower(substr($firstName, 0, 1) . $lastName);
-        $base = preg_replace('/[^a-z0-9]/', '', $base);
+        // Get role prefix
+        $prefix = $this->getRolePrefix($role);
         
-        $username = $base;
-        $counter = 1;
+        // Get current year
+        $year = date('Y');
         
-        while (User::where('username', $username)->exists()) {
-            $username = $base . $counter;
-            $counter++;
+        // Find the last username for this role and year
+        $lastUser = User::where('role', $role)
+            ->where('username', 'like', $prefix . '-' . $year . '-%')
+            ->orderBy('id', 'desc')
+            ->first();
+        
+        if ($lastUser) {
+            // Extract the number from the last username
+            // Example: "AD-2025-0005" -> extract "0005"
+            preg_match('/-(\d+)$/', $lastUser->username, $matches);
+            $lastNumber = isset($matches[1]) ? (int)$matches[1] : 0;
+            $nextNumber = $lastNumber + 1;
+        } else {
+            // First user of this role for this year
+            $nextNumber = 1;
         }
         
-        return $username;
+        // Format: PREFIX-YEAR-NNNN (4 digits, zero-padded)
+        $sequence = str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+        
+        return $prefix . '-' . $year . '-' . $sequence;
+    }
+
+    private function getRolePrefix(string $role): string
+    {
+        return match(strtolower($role)) {
+            'admin' => 'AD',
+            'instructor' => 'INS',
+            'student' => 'ST',
+            default => 'USR', // fallback
+        };
     }
 
     /**
