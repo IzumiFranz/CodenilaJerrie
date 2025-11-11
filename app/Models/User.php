@@ -69,6 +69,16 @@ class User extends Authenticatable
         return $this->hasMany(Feedback::class);
     }
 
+    public function receivedFeedback()
+    {
+        return $this->morphMany(Feedback::class, 'feedbackable');
+    }
+
+    public function quizAttempts()
+    {
+        return $this->hasMany(QuizAttempt::class);
+    }
+
     public function aiJobs()
     {
         return $this->hasMany(AIJob::class);
@@ -126,5 +136,12 @@ class User extends Authenticatable
             return $this->student;
         }
         return null;
+    }
+    
+    public function hasAccessToLesson($lessonId)
+    {
+        // Implement your access logic here
+        // For now, return true if user is a student
+        return $this->role === 'student';
     }
 }

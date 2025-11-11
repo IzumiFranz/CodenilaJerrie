@@ -49,11 +49,43 @@ class QuizAttempt extends Model
         return $this->belongsTo(Student::class);
     }
 
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function answers()
     {
         return $this->hasMany(QuizAnswer::class, 'attempt_id');
     }
 
+    public function getTotalQuestionsAttribute()
+    {
+        return $this->quiz->questions()->count();
+    }
+
+    public function getCorrectAnswersAttribute()
+    {
+        return $this->answers()->where('is_correct', true)->count();
+    }
+
+    public function getWrongAnswersAttribute()
+    {
+        return $this->total_questions - $this->correct_answers;
+    }
+
+    public function getTimeTakenAttribute()
+    {    
+        if ($this->started_at && $this->completed_at) {
+            return round($this->started_at->diffInMinutes($this->completed_at));
+        }
+        return 0;
+    }
+
+    public function getAnswersCountAttribute()
+    {
+        return $this->answers()->count();
+    }
     // Helper Methods
     public function start(): void
     {

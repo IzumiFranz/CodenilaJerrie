@@ -13,6 +13,8 @@ use App\Http\Controllers\Admin\SectionController as AdminSectionController;
 use App\Http\Controllers\Admin\SpecializationController;
 use App\Http\Controllers\Admin\EnrollmentController;
 use App\Http\Controllers\Admin\AssignmentController;
+use App\Http\Controllers\Admin\ExportController;
+use App\Http\Controllers\Admin\BulkActionsController;
 use App\Http\Controllers\Admin\LessonController as AdminLessonController;
 use App\Http\Controllers\Admin\QuizController as AdminQuizController;
 use App\Http\Controllers\Admin\FeedbackController as AdminFeedbackController;
@@ -21,6 +23,7 @@ use App\Http\Controllers\Admin\NotificationController as AdminNotificationContro
 use App\Http\Controllers\Instructor\InstructorDashboardController;
 use App\Http\Controllers\Instructor\LessonController;
 use App\Http\Controllers\Instructor\QuizController;
+use App\Http\Controllers\Instructor\QuistionTagController;
 use App\Http\Controllers\Instructor\QuestionBankController;
 use App\Http\Controllers\Instructor\StudentProgressController;
 use App\Http\Controllers\Instructor\QuizTemplateController;
@@ -29,6 +32,9 @@ use App\Http\Controllers\Student\LessonController as StudentLessonController;
 use App\Http\Controllers\Student\QuizController as StudentQuizController;
 use App\Http\Controllers\Student\QuizAttemptController;
 use App\Http\Controllers\Student\FeedbackController;
+use App\Http\Controllers\Student\SettingController;
+use App\Http\Controllers\Student\ProgressController;
+use App\Http\Controllers\Student\NotificationController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -176,7 +182,71 @@ Route::middleware(['auth', 'role:admin', 'password.change'])
     Route::post('notifications', [AdminNotificationController::class, 'store'])->name('notifications.store');
     Route::post('notifications/send-bulk', [AdminNotificationController::class, 'sendBulk'])
         ->name('notifications.send-bulk');
+
+    Route::prefix('export')->name('export.')->group(function () {
+            // Export Users
+        Route::get('/users', [ExportController::class, 'exportUsers'])->name('users');
+            
+            // Export Courses
+        Route::get('/courses', [ExportController::class, 'exportCourses'])->name('courses');
+            
+            // Export Subjects
+        Route::get('/subjects', [ExportController::class, 'exportSubjects'])->name('subjects');
+            
+            // Export Enrollments
+        Route::get('/enrollments', [ExportController::class, 'exportEnrollments'])->name('enrollments');
+            
+            // Export Quiz Results
+        Route::get('/quiz-results/{quiz}', [ExportController::class, 'exportQuizResults'])->name('quiz-results');
+            
+            // Export Analytics Report
+        Route::get('/analytics-report', [ExportController::class, 'generateAnalyticsReport'])->name('analytics-report');
+            
+            // Generate PDF Reports
+        Route::get('/users-pdf', [ExportController::class, 'generateUsersPDF'])->name('users-pdf');
+        });
+        // ============================================
+    // BULK ACTIONS ROUTES
+    // ============================================
+    Route::prefix('bulk-actions')->name('bulk-actions.')->group(function () {
+        // User Bulk Actions
+        Route::post('/update-user-status', [BulkActionsController::class, 'bulkUpdateUserStatus'])->name('update-user-status');
+        Route::delete('/delete-users', [BulkActionsController::class, 'bulkDeleteUsers'])->name('delete-users');
+        Route::post('/restore-users', [BulkActionsController::class, 'bulkRestoreUsers'])->name('restore-users');
+        Route::post('/assign-role', [BulkActionsController::class, 'bulkAssignRole'])->name('assign-role');
+        // Notification Bulk Actions
+        Route::post('/send-notifications', [BulkActionsController::class, 'bulkSendNotifications'])->name('send-notifications');      
+        // Enrollment Bulk Actions
+        Route::post('/drop-enrollments', [BulkActionsController::class, 'bulkDropEnrollments'])->name('drop-enrollments');
+        // Generic Bulk Actions
+        Route::delete('/delete', [BulkActionsController::class, 'bulkDelete'])->name('delete');
+        Route::post('/update-status', [BulkActionsController::class, 'bulkUpdateStatus'])->name('update-status');
+        Route::get('/export', [BulkActionsController::class, 'bulkExport'])->name('export');
+    });
+
+    // ============================================
+    // ANALYTICS ROUTES
+    // ============================================
+    Route::prefix('analytics')->name('analytics.')->group(function () {
+        Route::get('/dashboard', [App\Http\Controllers\Admin\AnalyticsController::class, 'dashboard'])->name('dashboard');
+        Route::get('/performance', [App\Http\Controllers\Admin\AnalyticsController::class, 'performance'])->name('performance');
+        Route::get('/trends', [App\Http\Controllers\Admin\AnalyticsController::class, 'trends'])->name('trends');
+    });
+
+    // ============================================
+    // PRINT ROUTES
+    // ============================================
+    Route::prefix('print')->name('print.')->group(function () {
+        Route::get('/users', [App\Http\Controllers\Admin\PrintController::class, 'users'])->name('users');
+        Route::get('/enrollments/{section}', [App\Http\Controllers\Admin\PrintController::class, 'enrollments'])->name('enrollments');
+        Route::get('/quiz-results/{quiz}', [App\Http\Controllers\Admin\PrintController::class, 'quizResults'])->name('quiz-results');
+        Route::get('/attendance-sheet/{section}', [App\Http\Controllers\Admin\PrintController::class, 'attendanceSheet'])->name('attendance-sheet');
+        Route::get('/grade-sheet/{section}', [App\Http\Controllers\Admin\PrintController::class, 'gradeSheet'])->name('grade-sheet');
+    });
 });
+
+
+
 
 /*
 |--------------------------------------------------------------------------
@@ -326,6 +396,8 @@ Route::middleware(['auth', 'role:student', 'password.change'])
     Route::get('lessons/{lesson}', [LessonController::class, 'show'])->name('lessons.show');
     Route::get('lessons/{lesson}/download', [LessonController::class, 'download'])
         ->name('lessons.download');
+    Route::get('/lessons/{attachment}/download', [LessonController::class, 'download'])
+        ->name('lessons.download');
     Route::post('/lessons/{lesson}/track-view', [LessonController::class, 'trackView'])
         ->name('lessons.track-view');
     Route::post('/lessons/{lesson}/update-duration', [LessonController::class, 'updateDuration'])
@@ -338,6 +410,8 @@ Route::middleware(['auth', 'role:student', 'password.change'])
     Route::prefix('lessons/{lesson}')->name('lessons.')->group(function () {
         Route::get('attachments/{attachment}/download', [LessonController::class, 'downloadAttachment'])
             ->name('attachments.download');
+        Route::get('/lessons/{lesson}/attachments/{attachmentId}/download', [LessonController::class, 'download'])
+            ->name('lessons.attachments.download');
         Route::get('attachments/{attachment}/view', [LessonController::class, 'viewAttachment'])
             ->name('attachments.view');
         Route::post('attachments/download-all', [LessonController::class, 'downloadAllAttachments'])
@@ -374,6 +448,7 @@ Route::middleware(['auth', 'role:student', 'password.change'])
     Route::get('feedback/create', [FeedbackController::class, 'create'])->name('feedback.create');
     Route::post('feedback', [FeedbackController::class, 'store'])->name('feedback.store');
     Route::get('feedback/{feedback}', [FeedbackController::class, 'show'])->name('feedback.show');
+    Route::delete('/feedback/{feedback}', [FeedbackController::class, 'destroy'])->name('feedback.destroy');
 
 
     // Notifications (NEW!)

@@ -13,22 +13,25 @@ class Feedback extends Model
 
     protected $fillable = [
         'user_id',
+        'type',
+        'subject',
+        'message',
+        'rating',
+        'status',
+        'is_anonymous',
         'feedbackable_type',
         'feedbackable_id',
-        'rating',
-        'comment',
-        'status',
-        'admin_response',
+        'response',
+        'response_by_id',
         'responded_at',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'rating' => 'integer',
-            'responded_at' => 'datetime',
-        ];
-    }
+    protected $casts = [
+        'is_anonymous' => 'boolean',
+        'responded_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
 
     // Relationships
     public function user()

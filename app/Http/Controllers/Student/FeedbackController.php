@@ -20,24 +20,40 @@ class FeedbackController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        // Gather counts for stats cards
-        $totalFeedback = $feedback->total();
-        $pendingFeedback = $feedback->where('status', 'pending')->count();
-        $respondedFeedback = $feedback->where('status', 'responded')->count();
-        $averageRating = $feedback->avg('rating') ?? 0;
+        // Optional filters
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
 
-        // Include quizzes, lessons, instructors for the form
-        $quizzes = Quiz::all();
-        $lessons = Lesson::all();
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('rating')) {
+            $query->where('rating', $request->rating);
+        }
+
+        $feedbacks = $query->orderByDesc('created_at')->paginate(12);
+
+        // Stats
+        $totalFeedback = Feedback::where('user_id', $user->id)->count();
+        $pendingFeedback = Feedback::where('user_id', $user->id)->where('status', 'pending')->count();
+        $respondedFeedback = Feedback::where('user_id', $user->id)->where('status', 'responded')->count();
+        $averageRating = Feedback::where('user_id', $user->id)->whereNotNull('rating')->avg('rating') ?? 0;
+
+        // Dropdown data for the submit form (inline tab)
+        $quizzes = Quiz::where('status', 'published')->get();
+        $lessons = Lesson::where('status', 'published')->get();
         $instructors = User::where('role', 'instructor')->get();
 
-        // Determine if we need to open the submit tab (if validation fails)
+        // Open "Submit Feedback" tab if validation failed previously
         $openSubmitTab = session()->getOldInput() ? true : false;
+
         return view('student.feedback.index', compact(
-            'feedback', 
-            'totalFeedback', 
-            'pendingFeedback', 
-            'respondedFeedback', 
+            'feedbacks',
+            'totalFeedback',
+            'pendingFeedback',
+            'respondedFeedback',
             'averageRating',
             'quizzes',
             'lessons',
@@ -107,13 +123,29 @@ class FeedbackController extends Controller
 
     public function show(Feedback $feedback)
     {
-        // Verify ownership
-        if ($feedback->user_id !== auth()->id()) {
-            abort(403, 'Unauthorized access to feedback.');
-        }
+        // Ownership check
+        abort_if($feedback->user_id !== auth()->id(), 403, 'Unauthorized access to feedback.');
 
-        $feedback->load('feedbackable');
+        $feedback->load(['feedbackable', 'response_by', 'user']);
 
-        return view('student.feedback.show', compact('feedback'));
+        $relatedFeedbacks = Feedback::where('user_id', auth()->id())
+            ->where('type', $feedback->type)
+            ->where('id', '!=', $feedback->id)
+            ->orderByDesc('created_at')
+            ->take(5)
+            ->get();
+
+        return view('student.feedback.show', compact('feedback', 'relatedFeedbacks'));
+    }
+
+    public function destroy(Feedback $feedback)
+    {
+        abort_if($feedback->user_id !== auth()->id(), 403, 'Unauthorized');
+        abort_if($feedback->status !== 'pending', 403, 'Only pending feedback can be deleted.');
+
+        $feedback->delete();
+
+        return redirect()->route('student.feedback.index')
+            ->with('success', 'Feedback deleted successfully.');
     }
 }

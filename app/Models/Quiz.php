@@ -77,6 +77,21 @@ class Quiz extends Model
         return $this->belongsTo(Subject::class);
     }
 
+    public function feedbacks()
+    {
+        return $this->morphMany(Feedback::class, 'feedbackable');
+    }
+    
+    public function lesson()
+    {
+        return $this->belongsTo(Lesson::class);
+    }
+
+    public function getQuestionsCountAttribute()
+    {
+        return $this->questions()->count();
+    }
+
     public function questions()
     {
         return $this->belongsToMany(QuestionBank::class, 'quiz_question')

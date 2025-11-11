@@ -86,6 +86,16 @@ class Lesson extends Model
         return $this->hasMany(LessonView::class);
     }
 
+    public function feedbacks() 
+    {     
+        return $this->morphMany(Feedback::class, 'feedbackable'); 
+    }
+
+    public function quizzes()
+    {     
+        return $this->hasMany(Quiz::class); 
+    }
+
     public function viewsByStudent(Student $student)
     {
         return $this->views()->where('student_id', $student->id);

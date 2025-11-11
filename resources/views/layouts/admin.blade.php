@@ -326,7 +326,10 @@
                 <li class="nav-item dropdown no-arrow mx-1">
                     <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" data-toggle="dropdown">
                         <i class="fas fa-bell fa-fw"></i>
-                        <span class="badge badge-danger badge-counter">3+</span>
+                        @if($unreadCount > 0)
+                         <span class="badge badge-danger badge-counter">{{ $unreadCount > 9 ? '9+' : $unreadCount }}</span>
+                        @endif
+
                     </a>
                     <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="alertsDropdown">
                         <h6 class="dropdown-header">Alerts Center</h6>
@@ -344,6 +347,80 @@
                         <a class="dropdown-item text-center small text-gray-500" href="#">Show All Alerts</a>
                     </div>
                 </li>
+
+                <div class="topbar-divider d-none d-sm-block"></div>
+
+                <ul class="navbar-nav ml-auto">
+
+                        <!-- 🆕 Nav Item - Notifications -->
+                        @php
+                            $unreadCount = Auth::user()->notifications()->where('is_read', false)->count();
+                            $recentNotifications = Auth::user()->notifications()
+                                ->orderBy('created_at', 'desc')
+                                ->limit(5)
+                                ->get();
+                        @endphp
+                        
+                        <!-- Notifications Dropdown -->
+                        <li class="nav-item dropdown no-arrow mx-1">
+                            <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-bell fa-fw"></i>
+                                @if($unreadCount > 0)
+                                    <span class="badge badge-danger badge-counter">{{ $unreadCount > 9 ? '9+' : $unreadCount }}</span>
+                                @endif
+                            </a>
+                            
+                            <!-- Dropdown - Notifications -->
+                            <div class="dropdown-list dropdown-menu dropdown-menu-right shadow animated--grow-in"
+                                aria-labelledby="alertsDropdown" style="max-width: 380px; min-width: 320px;">
+                                <h6 class="dropdown-header bg-info text-white">
+                                    <i class="fas fa-bell"></i> Notifications
+                                </h6>
+                                
+                                <div class="notification-list" style="max-height: 400px; overflow-y: auto;">
+                                    @forelse($recentNotifications as $notification)
+                                        <a class="dropdown-item d-flex align-items-center {{ !$notification->is_read ? 'bg-light' : '' }}" 
+                                        href="{{ route('student.notifications.mark-read', $notification) }}">
+                                            <div class="me-3">
+                                                @if($notification->type === 'info')
+                                                    <div class="icon-circle bg-info">
+                                                        <i class="fas fa-info-circle text-white"></i>
+                                                    </div>
+                                                @elseif($notification->type === 'success')
+                                                    <div class="icon-circle bg-success">
+                                                        <i class="fas fa-check-circle text-white"></i>
+                                                    </div>
+                                                @elseif($notification->type === 'warning')
+                                                    <div class="icon-circle bg-warning">
+                                                        <i class="fas fa-exclamation-triangle text-white"></i>
+                                                    </div>
+                                                @else
+                                                    <div class="icon-circle bg-danger">
+                                                        <i class="fas fa-exclamation-circle text-white"></i>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                            <div>
+                                                <div class="small text-gray-500">{{ $notification->created_at->diffForHumans() }}</div>
+                                                <span class="font-weight-bold">{{ Str::limit($notification->title, 50) }}</span>
+                                                @if(!$notification->is_read)
+                                                    <span class="badge bg-info ms-1">New</span>
+                                                @endif
+                                            </div>
+                                        </a>
+                                    @empty
+                                        <div class="dropdown-item text-center py-3">
+                                            <i class="fas fa-bell-slash text-muted"></i>
+                                            <p class="mb-0 text-muted">No new notifications</p>
+                                        </div>
+                                    @endforelse
+                                </div>
+                                
+                                <a class="dropdown-item text-center small text-gray-500 bg-light" href="{{ route('student.notifications.index') }}">
+                                    <i class="fas fa-eye"></i> View All Notifications
+                                </a>
+                            </div>
+                        </li>
 
                 <div class="topbar-divider d-none d-sm-block"></div>
 

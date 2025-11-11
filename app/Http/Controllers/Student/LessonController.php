@@ -74,7 +74,8 @@ class LessonController extends Controller
             'student_id' => $user->student->id
         ]);
 
-        $lesson->load(['subject.course', 'instructor.user']);
+        $lesson->load(['subject.course', 'instructor.user', 
+        'instructor', 'attachments', 'quizzes.attempts']);
 
         // Get other lessons in same subject
         $relatedLessons = Lesson::where('subject_id', $lesson->subject_id)
@@ -87,34 +88,66 @@ class LessonController extends Controller
         return view('student.lessons.show', compact('lesson', 'relatedLessons'));
     }
 
-    public function download(Lesson $lesson)
+    public function download(Lesson $lesson, $attachmentId = null)
     {
         // Check authorization
         $this->authorize('view', $lesson);
 
-        if (!$lesson->hasFile()) {
-            return back()->with('error', 'No file available for download.');
-        }
-
         try {
-            // Log file download
-            AuditLog::log('lesson_file_downloaded', $lesson, [], [
-                'student_id' => auth()->user()->student->id
+            // If downloading an attachment
+            if ($attachmentId) {
+                $attachment = \App\Models\LessonAttachment::where('lesson_id', $lesson->id)
+                    ->findOrFail($attachmentId);
+
+                // Optional: verify student access via a helper or policy
+                if (!auth()->user()->hasAccessToLesson($lesson->id)) {
+                    abort(403, 'Unauthorized access to this lesson attachment.');
+                }
+
+                // Increment download counter
+                $attachment->increment('download_count');
+
+                // Log audit
+                \App\Models\AuditLog::log('lesson_attachment_downloaded', $lesson, [
+                    'attachment_id' => $attachment->id,
+                    'filename' => $attachment->file_name,
+                ], [
+                    'student_id' => auth()->user()->student->id,
+                ]);
+
+                $filePath = storage_path('app/' . $attachment->file_path);
+
+                if (!file_exists($filePath)) {
+                    return back()->with('error', 'Attachment file not found.');
+                }
+
+                return response()->download($filePath, $attachment->file_name);
+            }
+
+            // Otherwise, download the lesson’s main file
+            if (!$lesson->hasFile()) {
+                return back()->with('error', 'No lesson file available for download.');
+            }
+
+            // Log main file download
+            \App\Models\AuditLog::log('lesson_file_downloaded', $lesson, [], [
+                'student_id' => auth()->user()->student->id,
             ]);
 
             $filePath = storage_path('app/' . $lesson->file_path);
-            
+
             if (!file_exists($filePath)) {
-                return back()->with('error', 'File not found.');
+                return back()->with('error', 'Lesson file not found.');
             }
 
             $fileName = basename($lesson->file_path);
-            
+
             return response()->download($filePath, $fileName);
         } catch (\Exception $e) {
-            return back()->with('error', 'Failed to download file: ' . $e->getMessage());
+            return back()->with('error', 'Download failed: ' . $e->getMessage());
         }
     }
+
 
     private function getCurrentSemester(): string
     {

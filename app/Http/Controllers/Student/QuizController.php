@@ -14,7 +14,7 @@ class QuizController extends Controller
         $user = auth()->user();
         $student = $user->student;
 
-        // Get enrolled subjects
+        // Get enrolled subjects for the current academic term
         $currentAcademicYear = now()->format('Y') . '-' . (now()->year + 1);
         $currentSemester = $this->getCurrentSemester();
 
@@ -28,14 +28,23 @@ class QuizController extends Controller
             ->flatten()
             ->unique('id');
 
+        // Base query: only published quizzes from enrolled subjects
         $query = Quiz::whereIn('subject_id', $enrolledSubjects->pluck('id'))
             ->where('is_published', true)
-            ->with(['subject', 'instructor.user'])
+            ->with([
+                'subject', 
+                'instructor.user',
+                'attempts' => fn($q) => $q->where('student_id', $student->id)
+            ])
             ->withCount('questions');
 
-        // Search
+        /** ------------------------------
+         *  FILTERS
+         *  ------------------------------ */
+
+        // Search by title
         if ($request->filled('search')) {
-            $query->where('title', 'like', "%{$request->search}%");
+            $query->where('title', 'like', '%' . $request->search . '%');
         }
 
         // Filter by subject
@@ -43,42 +52,91 @@ class QuizController extends Controller
             $query->where('subject_id', $request->subject_id);
         }
 
-        // Filter by status
+        // Filter by category (if quiz has category)
+        if ($request->filled('category')) {
+            $query->where('category_id', $request->category);
+        }
+
+        // Filter by difficulty (if quiz has difficulty)
+        if ($request->filled('difficulty')) {
+            $query->where('difficulty', $request->difficulty);
+        }
+
+        // Filter by availability status
         if ($request->filled('status')) {
+            $status = $request->status;
             $now = now();
-            if ($request->status === 'available') {
-                $query->where(function($q) use ($now) {
+
+            if ($status === 'available') {
+                $query->where(function ($q) use ($now) {
                     $q->whereNull('available_from')->orWhere('available_from', '<=', $now);
-                })->where(function($q) use ($now) {
+                })->where(function ($q) use ($now) {
                     $q->whereNull('available_until')->orWhere('available_until', '>=', $now);
                 });
-            } elseif ($request->status === 'upcoming') {
+            } elseif ($status === 'upcoming') {
                 $query->where('available_from', '>', $now);
-            } elseif ($request->status === 'expired') {
+            } elseif ($status === 'expired') {
                 $query->where('available_until', '<', $now);
+            } elseif ($status === 'not_attempted') {
+                $query->whereDoesntHave('attempts', fn($q) => $q->where('student_id', $student->id));
+            } elseif ($status === 'in_progress') {
+                $query->whereHas('attempts', fn($q) => $q
+                    ->where('student_id', $student->id)
+                    ->where('status', 'in_progress'));
+            } elseif ($status === 'completed') {
+                $query->whereHas('attempts', fn($q) => $q
+                    ->where('student_id', $student->id)
+                    ->where('status', 'completed'));
             }
         }
 
         $quizzes = $query->orderBy('available_from', 'desc')->paginate(12);
 
-        // Add attempt info for each quiz
+        /** ------------------------------
+         *  STATS + EXTRA INFO
+         *  ------------------------------ */
+
         foreach ($quizzes as $quiz) {
             $quiz->student_attempts = $quiz->attempts()
                 ->where('student_id', $student->id)
                 ->where('status', 'completed')
                 ->count();
-            
-            $quiz->can_take = $quiz->studentCanTakeQuiz($student);
-            
+
             $quiz->best_score = $quiz->attempts()
                 ->where('student_id', $student->id)
                 ->where('status', 'completed')
                 ->max('percentage');
+
+            $quiz->can_take = $quiz->studentCanTakeQuiz($student);
         }
+
+        // Statistics summary
+        $totalQuizzes = Quiz::where('is_published', true)
+            ->whereIn('subject_id', $enrolledSubjects->pluck('id'))
+            ->count();
+
+        $completedQuizzes = Quiz::whereIn('subject_id', $enrolledSubjects->pluck('id'))
+            ->whereHas('attempts', fn($q) => $q->where('student_id', $student->id)->where('status', 'completed'))
+            ->count();
+
+        $inProgressQuizzes = Quiz::whereIn('subject_id', $enrolledSubjects->pluck('id'))
+            ->whereHas('attempts', fn($q) => $q->where('student_id', $student->id)->where('status', 'in_progress'))
+            ->count();
+
+        $averageScore = \App\Models\QuizAttempt::where('student_id', $student->id)
+            ->where('status', 'completed')
+            ->avg('score') ?? 0;
+
+        $categories = \App\Models\Category::all();
 
         return view('student.quizzes.index', compact(
             'quizzes',
-            'enrolledSubjects'
+            'categories',
+            'enrolledSubjects',
+            'totalQuizzes',
+            'completedQuizzes',
+            'inProgressQuizzes',
+            'averageScore'
         ));
     }
 
@@ -90,34 +148,41 @@ class QuizController extends Controller
         $user = auth()->user();
         $student = $user->student;
 
+        // Load all relationships needed for display
         $quiz->load([
             'subject.course',
             'instructor.user',
-            'questions' => function($query) {
-                $query->orderBy('quiz_question.order');
-            }
+            'lesson',
+            'questions' => fn($query) => $query->orderBy('quiz_question.order'),
         ]);
 
-        // Get student's attempts
-        $attempts = $quiz->attempts()
+        // All previous attempts (completed)
+        $previousAttempts = $quiz->attempts()
             ->where('student_id', $student->id)
-            ->orderBy('attempt_number', 'desc')
+            ->where('status', 'completed')
+            ->orderBy('created_at', 'desc')
             ->get();
 
-        // Check if student can take quiz
-        $canTake = $quiz->studentCanTakeQuiz($student);
-
-        // Check for in-progress attempt
+        // In-progress attempt
         $inProgressAttempt = $quiz->attempts()
             ->where('student_id', $student->id)
             ->where('status', 'in_progress')
             ->first();
 
+        $hasInProgressAttempt = !is_null($inProgressAttempt);
+
+        // Retake permission
+        $canTakeQuiz = $quiz->studentCanTakeQuiz($student);
+        if (!$quiz->allow_retake && $previousAttempts->count() > 0) {
+            $canTakeQuiz = false;
+        }
+
         return view('student.quizzes.show', compact(
             'quiz',
-            'attempts',
-            'canTake',
-            'inProgressAttempt'
+            'previousAttempts',
+            'hasInProgressAttempt',
+            'inProgressAttempt',
+            'canTakeQuiz'
         ));
     }
 

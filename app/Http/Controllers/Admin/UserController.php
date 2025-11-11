@@ -11,9 +11,12 @@ use App\Models\Course;
 use App\Models\Specialization;
 use App\Models\AuditLog;
 use App\Mail\WelcomeMail;
+use App\Mail\BulkUsersCreatedMail;
+use App\Mail\UserCreatedMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 
@@ -97,6 +100,7 @@ class UserController extends Controller
             'year_level' => ['required_if:role,student', 'nullable', 'integer', 'min:1', 'max:6'],
             'address' => ['nullable', 'string', 'max:500'],
             'admission_date' => ['nullable', 'date'],
+            'send_email' => ['nullable', 'boolean'],
         ]);
 
         try {
@@ -185,21 +189,48 @@ class UserController extends Controller
                     break;
             }
 
+           // Log the creation
+        AuditLog::log('user_created', $user, [], [
+            'role' => $user->role,
+            'email' => $user->email,
+        ]);
 
-            DB::commit();
+        DB::commit();
 
-            // Log the creation
-            AuditLog::log('user_created', $user, [], [
-                'role' => $user->role,
-                'email' => $user->email,
-            ]);
+        // 🔔 SEND EMAILS
+        if ($request->input('send_email', true)) {
+            try {
+                // Send the admin/system notification email
+                Mail::to($user->email)->send(new UserCreatedMail($user, $password));
 
-            // 🔔 SEND WELCOME EMAIL WITH CREDENTIALS
-            Mail::to($user->email)->queue(new WelcomeMail($user, $password));
-        
-            return redirect()
-                ->route('admin.users.index')
-                ->with('success', "User created successfully. Username: {$username}, Password: {$password}");
+                AuditLog::log('user_creation_email_sent', $user, [], [
+                    'email' => $user->email,
+                    'type'  => 'UserCreatedMail',
+                    'sent_at' => now(),
+                ]);
+
+                // Optionally send the friendly welcome email
+                Mail::to($user->email)->queue(new WelcomeMail($user, $password));
+
+                AuditLog::log('welcome_email_sent', $user, [], [
+                    'email' => $user->email,
+                    'type'  => 'WelcomeMail',
+                    'queued_at' => now(),
+                ]);
+
+                $emailStatus = 'Both User Created and Welcome emails sent to ' . $user->email;
+
+            } catch (\Exception $e) {
+                \Log::error('Failed to send creation/welcome emails: ' . $e->getMessage());
+                $emailStatus = 'User created but email(s) failed. Please manually send credentials.';
+            }
+        } else {
+            $emailStatus = 'Email notifications disabled.';
+        }
+
+        return redirect()
+            ->route('admin.users.index')
+            ->with('success', "User created successfully! Username: {$username}, Password: {$password}. {$emailStatus}");
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -228,10 +259,11 @@ class UserController extends Controller
         $sequence = str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
         return 'EMP-' . $year . '-' . $sequence;
     }
-}
+
 
     /**
-     * Display the specified user
+    /**
+     * Display the specified user.
      */
     public function show(User $user)
     {
@@ -442,18 +474,20 @@ class UserController extends Controller
         $request->validate([
             'csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'], // 5MB max
             'role' => ['required', 'in:admin,instructor,student'],
+            'send_email' => ['nullable', 'boolean'],
         ]);
 
         try {
             $file = $request->file('csv_file');
             $role = $request->role;
-            
+            $sendEmail = $request->input('send_email', true);
+
             $csv = array_map('str_getcsv', file($file));
             $headers = array_shift($csv);
             
             $created = [];
             $failed = [];
-            
+
             DB::beginTransaction();
 
             foreach ($csv as $index => $row) {
@@ -514,9 +548,32 @@ class UserController extends Controller
 
             DB::commit();
 
-            // TODO: Generate CSV with credentials and send via email
-            // Mail::to(auth()->user()->email)->send(new BulkUsersCreatedMail($created));
+            // Send bulk email with CSV attachment if requested
+            if ($sendEmail && count($created) > 0) {
+                try {
+                    Mail::to(auth()->user()->email)
+                        ->send(new BulkUsersCreatedMail($created, $role));
 
+                    AuditLog::log('bulk_users_created', null, [], [
+                        'role' => $role,
+                        'count' => count($created),
+                        'email_sent' => true,
+                        'sent_to' => auth()->user()->email
+                    ]);
+
+                    $emailStatus = 'Credentials sent to your email with CSV attachment.';
+                } catch (\Exception $e) {
+                    \Log::error('Failed to send bulk creation email: ' . $e->getMessage());
+                    $emailStatus = 'Users created but email failed. Please export credentials manually.';
+                }
+            } else {
+                AuditLog::log('bulk_users_created', null, [], [
+                    'role' => $role,
+                    'count' => count($created),
+                    'email_sent' => false
+                ]);
+                $emailStatus = 'Email notification disabled.';
+            }
             AuditLog::log('bulk_users_created', null, [], [
                 'role' => $role,
                 'count' => count($created),

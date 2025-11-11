@@ -1,0 +1,400 @@
+@media print {
+    /* Hide unnecessary elements */
+    .no-print,
+    .sidebar,
+    .topbar,
+    .navbar,
+    .page-actions,
+    .btn,
+    .dropdown,
+    .pagination,
+    .modal,
+    .modal-backdrop,
+    .alert,
+    .toast,
+    #accordionSidebar,
+    .fixed-top,
+    .sticky-top,
+    footer,
+    .breadcrumb,
+    .card-actions,
+    .action-buttons {
+        display: none !important;
+    }
+
+    /* Reset body styles */
+    body {
+        margin: 0;
+        padding: 15px;
+        font-size: 11pt;
+        line-height: 1.4;
+        color: #000;
+        background: white !important;
+    }
+
+    /* Content wrapper */
+    #content-wrapper,
+    #content,
+    .container-fluid {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Page breaks */
+    .page-break {
+        page-break-after: always;
+        break-after: page;
+    }
+
+    .page-break-before {
+        page-break-before: always;
+        break-before: page;
+    }
+
+    .no-page-break {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    /* Cards */
+    .card {
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+        margin-bottom: 20px;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    .card-header {
+        background-color: #f8f9fc !important;
+        border-bottom: 2px solid #4e73df !important;
+        padding: 10px 15px !important;
+        font-weight: bold;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .card-body {
+        padding: 15px !important;
+    }
+
+    /* Tables */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 15px;
+        page-break-inside: auto;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+
+    th, td {
+        border: 1px solid #ddd !important;
+        padding: 8px !important;
+        text-align: left;
+        font-size: 10pt;
+    }
+
+    th {
+        background-color: #f8f9fc !important;
+        font-weight: bold;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Badges */
+    .badge {
+        border: 1px solid #333;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 9pt;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .badge-primary {
+        background-color: #4e73df !important;
+        color: white !important;
+    }
+
+    .badge-success {
+        background-color: #1cc88a !important;
+        color: white !important;
+    }
+
+    .badge-info {
+        background-color: #36b9cc !important;
+        color: white !important;
+    }
+
+    .badge-warning {
+        background-color: #f6c23e !important;
+        color: #000 !important;
+    }
+
+    .badge-danger {
+        background-color: #e74a3b !important;
+        color: white !important;
+    }
+
+    /* Progress bars */
+    .progress {
+        border: 1px solid #ddd;
+        height: 18px;
+        background-color: #f8f9fc !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .progress-bar {
+        background-color: #4e73df !important;
+        color: white;
+        text-align: center;
+        line-height: 18px;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Charts - Convert to static images */
+    canvas {
+        max-width: 100% !important;
+        height: auto !important;
+        page-break-inside: avoid;
+    }
+
+    /* Typography */
+    h1, h2, h3, h4, h5, h6 {
+        page-break-after: avoid;
+        break-after: avoid;
+        color: #000;
+    }
+
+    h1 { font-size: 20pt; }
+    h2 { font-size: 18pt; }
+    h3 { font-size: 16pt; }
+    h4 { font-size: 14pt; }
+    h5 { font-size: 12pt; }
+    h6 { font-size: 11pt; }
+
+    /* Links */
+    a {
+        color: #000;
+        text-decoration: none;
+    }
+
+    a[href]:after {
+        content: " (" attr(href) ")";
+        font-size: 9pt;
+        color: #666;
+    }
+
+    a[href^="#"]:after,
+    a[href^="javascript:"]:after {
+        content: "";
+    }
+
+    /* Images */
+    img {
+        max-width: 100%;
+        page-break-inside: avoid;
+    }
+
+    /* Rows and columns */
+    .row {
+        width: 100%;
+    }
+
+    .col-1, .col-2, .col-3, .col-4, .col-5, .col-6,
+    .col-7, .col-8, .col-9, .col-10, .col-11, .col-12,
+    .col-sm-1, .col-sm-2, .col-sm-3, .col-sm-4, .col-sm-5, .col-sm-6,
+    .col-sm-7, .col-sm-8, .col-sm-9, .col-sm-10, .col-sm-11, .col-sm-12,
+    .col-md-1, .col-md-2, .col-md-3, .col-md-4, .col-md-5, .col-md-6,
+    .col-md-7, .col-md-8, .col-md-9, .col-md-10, .col-md-11, .col-md-12,
+    .col-lg-1, .col-lg-2, .col-lg-3, .col-lg-4, .col-lg-5, .col-lg-6,
+    .col-lg-7, .col-lg-8, .col-lg-9, .col-lg-10, .col-lg-11, .col-lg-12,
+    .col-xl-1, .col-xl-2, .col-xl-3, .col-xl-4, .col-xl-5, .col-xl-6,
+    .col-xl-7, .col-xl-8, .col-xl-9, .col-xl-10, .col-xl-11, .col-xl-12 {
+        float: left;
+        width: 100%;
+    }
+
+    /* Print header and footer */
+    @page {
+        margin: 2cm;
+        size: A4;
+    }
+
+    /* Header for each page */
+    .print-header {
+        position: running(header);
+        text-align: center;
+        border-bottom: 2px solid #4e73df;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+
+    /* Footer for each page */
+    .print-footer {
+        position: running(footer);
+        text-align: center;
+        border-top: 1px solid #ddd;
+        padding-top: 10px;
+        margin-top: 20px;
+        font-size: 9pt;
+    }
+
+    /* Page numbers */
+    .page-number:after {
+        content: counter(page);
+    }
+
+    /* Signature lines */
+    .signature-line {
+        border-top: 1px solid #000;
+        width: 200px;
+        margin: 40px 0 5px 0;
+        display: inline-block;
+    }
+
+    /* Statistics cards for print */
+    .border-left-primary,
+    .border-left-success,
+    .border-left-info,
+    .border-left-warning,
+    .border-left-danger {
+        border-left: 4px solid #ddd !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Report title */
+    .report-title {
+        text-align: center;
+        font-size: 24pt;
+        font-weight: bold;
+        margin-bottom: 20px;
+        page-break-after: avoid;
+    }
+
+    /* Report metadata */
+    .report-meta {
+        text-align: center;
+        font-size: 10pt;
+        color: #666;
+        margin-bottom: 30px;
+        page-break-after: avoid;
+    }
+
+    /* Summary boxes */
+    .summary-box {
+        border: 2px solid #4e73df;
+        padding: 15px;
+        margin-bottom: 20px;
+        page-break-inside: avoid;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Watermark (optional) */
+    .watermark {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 100pt;
+        opacity: 0.05;
+        z-index: -1;
+        pointer-events: none;
+    }
+
+    /* QR Code or barcode area */
+    .print-qr-code {
+        text-align: right;
+        page-break-inside: avoid;
+    }
+
+    /* Text utilities for print */
+    .text-print-only {
+        display: block !important;
+    }
+
+    .text-sm-print {
+        font-size: 9pt;
+    }
+
+    /* Ensure exact colors are printed */
+    * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+
+/* Screen-only styles (won't print) */
+@media screen {
+    .print-only {
+        display: none !important;
+    }
+
+    .print-header,
+    .print-footer {
+        display: none;
+    }
+}
+
+/* Specific report styles */
+.report-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.report-section {
+    margin-bottom: 30px;
+    page-break-inside: avoid;
+}
+
+.report-section-title {
+    font-size: 14pt;
+    font-weight: bold;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 2px solid #4e73df;
+}
+
+/* Attendance sheet style */
+.attendance-table td {
+    height: 40px;
+}
+
+.attendance-checkbox {
+    width: 20px;
+    height: 20px;
+    border: 1px solid #000;
+    display: inline-block;
+}
+
+/* Grade sheet style */
+.grade-table th {
+    writing-mode: horizontal-tb;
+    transform: rotate(0deg);
+}
+
+/* Certificate style */
+.certificate-border {
+    border: 5px double #4e73df;
+    padding: 30px;
+    text-align: center;
+}
+
+.certificate-logo {
+    max-width: 150px;
+    margin-bottom: 20px;
+}

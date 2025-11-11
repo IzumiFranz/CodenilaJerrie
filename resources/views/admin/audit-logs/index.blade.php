@@ -1,132 +1,243 @@
+{{-- resources/views/admin/notifications/create.blade.php --}}
 @extends('layouts.admin')
-@section('title', 'Audit Logs')
+
+@section('title', 'Send Notification')
+
+@php
+    $pageTitle = 'Send Notification';
+    $pageActions = '<a href="' . route('admin.notifications.index') . '" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back
+    </a>';
+@endphp
+
 @section('content')
-<div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-history mr-2"></i>Audit Logs</h1>
-    <div class="btn-group">
-        <a href="{{ route('admin.audit-logs.export', request()->query()) }}" class="btn btn-success btn-sm">
-            <i class="fas fa-download mr-1"></i> Export CSV
-        </a>
-        <button type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#clearLogsModal">
-            <i class="fas fa-trash-alt mr-1"></i> Clear Old Logs
-        </button>
-    </div>
-</div>
-
-<div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Search & Filter</h6>
-    </div>
-    <div class="card-body">
-        <form method="GET">
-            <div class="row">
-                <div class="col-md-3">
-                    <input type="text" name="search" class="form-control" placeholder="Search..." value="{{ request('search') }}">
-                </div>
-                <div class="col-md-3">
-                    <select name="action" class="form-control">
-                        <option value="">All Actions</option>
-                        @foreach($actions as $act)
-                        <option value="{{ $act }}" {{ request('action') == $act ? 'selected' : '' }}>{{ $act }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <input type="date" name="date_from" class="form-control" placeholder="From" value="{{ request('date_from') }}">
-                </div>
-                <div class="col-md-2">
-                    <input type="date" name="date_to" class="form-control" placeholder="To" value="{{ request('date_to') }}">
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary btn-block">
-                        <i class="fas fa-search"></i> Filter
-                    </button>
-                </div>
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 bg-primary text-white">
+                <h6 class="m-0 font-weight-bold">
+                    <i class="fas fa-paper-plane"></i> Compose Notification
+                </h6>
             </div>
-        </form>
-    </div>
-</div>
+            <div class="card-body">
+                <form action="{{ route('admin.notifications.store') }}" method="POST">
+                    @csrf
 
-<div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Activity Log</h6>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-sm table-hover">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>User</th>
-                        <th>Action</th>
-                        <th>Model</th>
-                        <th>IP Address</th>
-                        <th>Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($logs as $log)
-                    <tr>
-                        <td>{{ $log->id }}</td>
-                        <td>{{ $log->user ? $log->user->username : 'System' }}</td>
-                        <td><span class="badge badge-primary">{{ $log->action }}</span></td>
-                        <td>{{ $log->model_type ? class_basename($log->model_type) : '-' }}</td>
-                        <td>{{ $log->ip_address ?? '-' }}</td>
-                        <td>{{ $log->created_at->format('M d, Y h:i A') }}</td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="6" class="text-center py-4">
-                            <div class="empty-state">
-                                <i class="fas fa-history"></i>
-                                <p class="mb-0">No audit logs found</p>
-                            </div>
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-        <div class="mt-3">
-            {{ $logs->links() }}
-        </div>
-    </div>
-</div>
-
-@livewire('audit-log-table')
-
-{{-- Clear Logs Modal --}}
-<div class="modal fade" id="clearLogsModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Clear Old Logs</h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <form action="{{ route('admin.audit-logs.clear') }}" method="POST">
-                @csrf
-                @method('DELETE')
-                <div class="modal-body">
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle mr-2"></i>
-                        This will permanently delete logs older than the specified days.
-                    </div>
+                    <!-- Recipient Type -->
                     <div class="form-group">
-                        <label>Delete logs older than (days)</label>
-                        <input type="number" name="days" class="form-control" value="30" min="30" required>
-                        <small class="form-text text-muted">Minimum: 30 days</small>
+                        <label for="recipient_type">Send To <span class="text-danger">*</span></label>
+                        <select name="recipient_type" id="recipient_type" 
+                            class="form-control @error('recipient_type') is-invalid @enderror" 
+                            required onchange="toggleRecipientFields()">
+                            <option value="">Select recipient type...</option>
+                            <option value="single" {{ old('recipient_type') == 'single' ? 'selected' : '' }}>Single User</option>
+                            <option value="role" {{ old('recipient_type') == 'role' ? 'selected' : '' }}>All Users by Role</option>
+                            <option value="all" {{ old('recipient_type') == 'all' ? 'selected' : '' }}>All Users</option>
+                        </select>
+                        @error('recipient_type')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
+
+                    <!-- Single User Field -->
+                    <div class="form-group" id="single_user_field" style="display: none;">
+                        <label for="user_id">Select User <span class="text-danger">*</span></label>
+                        <input type="text" id="user_search" class="form-control mb-2" placeholder="Search by username or email...">
+                        <select name="user_id" id="user_id" class="form-control @error('user_id') is-invalid @enderror" size="5">
+                            <option value="">Select a user...</option>
+                        </select>
+                        @error('user_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="form-text text-muted">Search and select a specific user</small>
+                    </div>
+
+                    <!-- Role Field -->
+                    <div class="form-group" id="role_field" style="display: none;">
+                        <label for="role">Select Role <span class="text-danger">*</span></label>
+                        <select name="role" id="role" class="form-control @error('role') is-invalid @enderror">
+                            <option value="">Select role...</option>
+                            <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Admins</option>
+                            <option value="instructor" {{ old('role') == 'instructor' ? 'selected' : '' }}>Instructors</option>
+                            <option value="student" {{ old('role') == 'student' ? 'selected' : '' }}>Students</option>
+                        </select>
+                        @error('role')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <!-- Notification Type -->
+                    <div class="form-group">
+                        <label for="type">Notification Type <span class="text-danger">*</span></label>
+                        <select name="type" id="type" 
+                            class="form-control @error('type') is-invalid @enderror" 
+                            required onchange="updatePreview()">
+                            <option value="">Select type...</option>
+                            <option value="info" {{ old('type') == 'info' ? 'selected' : '' }}>Info (Blue)</option>
+                            <option value="success" {{ old('type') == 'success' ? 'selected' : '' }}>Success (Green)</option>
+                            <option value="warning" {{ old('type') == 'warning' ? 'selected' : '' }}>Warning (Yellow)</option>
+                            <option value="danger" {{ old('type') == 'danger' ? 'selected' : '' }}>Danger (Red)</option>
+                        </select>
+                        @error('type')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <!-- Title -->
+                    <div class="form-group">
+                        <label for="title">Title <span class="text-danger">*</span></label>
+                        <input type="text" name="title" id="title" 
+                            class="form-control @error('title') is-invalid @enderror" 
+                            placeholder="Enter notification title..."
+                            value="{{ old('title') }}"
+                            maxlength="255"
+                            required
+                            onkeyup="updatePreview()">
+                        @error('title')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <!-- Message -->
+                    <div class="form-group">
+                        <label for="message">Message <span class="text-danger">*</span></label>
+                        <textarea name="message" id="message" 
+                            class="form-control @error('message') is-invalid @enderror" 
+                            rows="5"
+                            placeholder="Enter notification message..."
+                            maxlength="1000"
+                            required
+                            onkeyup="updatePreview()">{{ old('message') }}</textarea>
+                        @error('message')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="form-text text-muted">
+                            <span id="char_count">0</span>/1000 characters
+                        </small>
+                    </div>
+
+                    <!-- Action URL (Optional) -->
+                    <div class="form-group">
+                        <label for="action_url">Action URL (Optional)</label>
+                        <input type="url" name="action_url" id="action_url" 
+                            class="form-control @error('action_url') is-invalid @enderror" 
+                            placeholder="https://example.com/action"
+                            value="{{ old('action_url') }}"
+                            maxlength="500">
+                        @error('action_url')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="form-text text-muted">Optional link for users to take action</small>
+                    </div>
+
+                    <hr>
+
+                    <!-- Form Actions -->
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{{ route('admin.notifications.index') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Send Notification
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Preview -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Preview</h6>
+            </div>
+            <div class="card-body">
+                <div id="notification_preview" class="alert alert-info">
+                    <h6 class="alert-heading"><i class="fas fa-info-circle"></i> <strong id="preview_title">Notification Title</strong></h6>
+                    <p id="preview_message" class="mb-0">Notification message will appear here...</p>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger">
-                        <i class="fas fa-trash-alt mr-1"></i> Clear Logs
-                    </button>
-                </div>
-            </form>
+            </div>
+        </div>
+
+        <!-- Info Card -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 bg-info text-white">
+                <h6 class="m-0 font-weight-bold">
+                    <i class="fas fa-info-circle"></i> Information
+                </h6>
+            </div>
+            <div class="card-body">
+                <h6 class="text-primary">Notification Types:</h6>
+                <ul class="small">
+                    <li><strong>Info:</strong> General information</li>
+                    <li><strong>Success:</strong> Positive updates</li>
+                    <li><strong>Warning:</strong> Important notices</li>
+                    <li><strong>Danger:</strong> Critical alerts</li>
+                </ul>
+
+                <hr>
+
+                <h6 class="text-primary">Recipient Options:</h6>
+                <ul class="small mb-0">
+                    <li><strong>Single User:</strong> Send to one specific user</li>
+                    <li><strong>By Role:</strong> Send to all users with specific role</li>
+                    <li><strong>All Users:</strong> Broadcast to everyone</li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+function toggleRecipientFields() {
+    const recipientType = document.getElementById('recipient_type').value;
+    
+    document.getElementById('single_user_field').style.display = recipientType === 'single' ? 'block' : 'none';
+    document.getElementById('role_field').style.display = recipientType === 'role' ? 'block' : 'none';
+}
+
+function updatePreview() {
+    const type = document.getElementById('type').value || 'info';
+    const title = document.getElementById('title').value || 'Notification Title';
+    const message = document.getElementById('message').value || 'Notification message will appear here...';
+    
+    const preview = document.getElementById('notification_preview');
+    preview.className = `alert alert-${type}`;
+    
+    let icon = 'fa-info-circle';
+    if (type === 'success') icon = 'fa-check-circle';
+    else if (type === 'warning') icon = 'fa-exclamation-triangle';
+    else if (type === 'danger') icon = 'fa-exclamation-circle';
+    
+    document.getElementById('preview_title').innerHTML = `<i class="fas ${icon}"></i> ${title}`;
+    document.getElementById('preview_message').textContent = message;
+    
+    // Update character count
+    document.getElementById('char_count').textContent = message.length;
+}
+
+// Simple user search functionality
+document.getElementById('user_search')?.addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const options = document.querySelectorAll('#user_id option');
+    
+    options.forEach(option => {
+        if (option.value === '') return;
+        const text = option.textContent.toLowerCase();
+        option.style.display = text.includes(searchTerm) ? 'block' : 'none';
+    });
+});
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    toggleRecipientFields();
+    updatePreview();
+    
+    // Load users via AJAX (you can implement this)
+    // For now, you might want to pass users from controller
+});
+</script>
+@endpush
 @endsection

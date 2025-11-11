@@ -6,28 +6,43 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
-        Schema::create('feedback', function (Blueprint $table) {
+        Schema::create('feedbacks', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->enum('type', ['quiz', 'lesson', 'instructor', 'general']);
+            $table->string('subject');
+            $table->text('message');
+            $table->tinyInteger('rating')->nullable();
+            $table->enum('status', ['pending', 'responded'])->default('pending');
+            $table->boolean('is_anonymous')->default(false);
+            
+            // Polymorphic relationship
             $table->string('feedbackable_type')->nullable();
             $table->unsignedBigInteger('feedbackable_id')->nullable();
-            $table->integer('rating')->nullable();
-            $table->text('comment');
-            $table->enum('status', ['pending', 'reviewed', 'resolved'])->default('pending');
-            $table->text('admin_response')->nullable();
+            
+            // Response fields
+            $table->text('response')->nullable();
+            $table->foreignId('response_by_id')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamp('responded_at')->nullable();
+            
             $table->timestamps();
-
-            $table->index('user_id');
+            
+            // Indexes
+            $table->index(['user_id', 'status']);
             $table->index(['feedbackable_type', 'feedbackable_id']);
-            $table->index('status');
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
-        Schema::dropIfExists('feedback');
+        Schema::dropIfExists('feedbacks');
     }
 };
