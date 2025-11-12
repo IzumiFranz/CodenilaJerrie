@@ -81,6 +81,77 @@
 </div>
 
 <div class="row mb-4">
+    <div class="col-lg-12">
+        <div class="card shadow border-left-primary">
+            <div class="card-header py-3 bg-gradient-primary">
+                <h6 class="m-0 font-weight-bold text-white">
+                    <i class="fas fa-robot"></i> AI Assistant Features
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-4">Enhance your teaching with AI-powered tools:</p>
+                
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100 border-primary">
+                            <div class="card-body text-center">
+                                <i class="fas fa-brain fa-3x text-primary mb-3"></i>
+                                <h5>Question Generation</h5>
+                                <p class="text-muted">
+                                    Automatically create quiz questions from your lessons
+                                </p>
+                                <a href="{{ route('instructor.question-bank.index') }}?ai_generate=1" 
+                                   class="btn btn-primary btn-sm">
+                                    Try Now
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100 border-success">
+                            <div class="card-body text-center">
+                                <i class="fas fa-check-double fa-3x text-success mb-3"></i>
+                                <h5>Question Validation</h5>
+                                <p class="text-muted">
+                                    Get AI feedback on question quality and clarity
+                                </p>
+                                <a href="{{ route('instructor.question-bank.index') }}" 
+                                   class="btn btn-success btn-sm">
+                                    Validate Questions
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100 border-info">
+                            <div class="card-body text-center">
+                                <i class="fas fa-chart-line fa-3x text-info mb-3"></i>
+                                <h5>Quiz Analysis</h5>
+                                <p class="text-muted">
+                                    Understand quiz performance with AI insights
+                                </p>
+                                <a href="{{ route('instructor.quizzes.index') }}" 
+                                   class="btn btn-info btn-sm">
+                                    Analyze Quizzes
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-3">
+                    <a href="{{ route('instructor.ai.index') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-history"></i> View AI Job History
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
     <div class="col-md-3">
         <div class="card border-left-info shadow h-100 py-2">
             <div class="card-body">
@@ -276,6 +347,46 @@
         </div>
     </div>
 </div>
+@if(isset($stats['ai_stats']))
+<div class="row mb-4">
+    <div class="col-lg-12">
+        <div class="card shadow border-left-primary">
+            <div class="card-header py-3 bg-gradient-primary">
+                <h6 class="m-0 font-weight-bold text-white">
+                    <i class="fas fa-robot"></i> AI Assistant
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 text-center">
+                        <div class="p-3 bg-light rounded">
+                            <h3 class="text-primary">{{ $stats['ai_stats']['questions_generated'] }}</h3>
+                            <small class="text-muted">Questions Generated</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="p-3 bg-light rounded">
+                            <h3 class="text-success">{{ $stats['ai_stats']['questions_validated'] }}</h3>
+                            <small class="text-muted">Questions Validated</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="p-3 bg-light rounded">
+                            <h3 class="text-info">{{ $stats['ai_stats']['quizzes_analyzed'] }}</h3>
+                            <small class="text-muted">Quizzes Analyzed</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ route('instructor.ai.index') }}" class="btn btn-primary btn-block btn-lg">
+                            <i class="fas fa-magic"></i> Open AI Assistant
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>

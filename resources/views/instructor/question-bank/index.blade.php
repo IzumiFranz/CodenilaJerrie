@@ -2,12 +2,17 @@
 @section('title', 'Question Bank')
 @section('content')
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-question-circle mr-2"></i>Question Bank</h1>
-    <a href="{{ route('instructor.question-bank.create') }}" class="btn btn-success">
-        <i class="fas fa-plus"></i> Add Question
+<div class="btn-group" role="group">
+    <a href="{{ route('instructor.question-bank.create') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Create Question
     </a>
+    <button type="button" class="btn btn-success" data-toggle="modal" data-target="#aiGenerateModal">
+        <i class="fas fa-robot"></i> Generate with AI
+    </button>
 </div>
+
+{{-- Include the modal at the bottom of the page --}}
+@include('instructor.question-bank.partials.ai-generate-modal')
 
 <!-- Filters -->
 <div class="card mb-4">
@@ -100,6 +105,12 @@
                                 <a href="{{ route('instructor.question-bank.edit', $question) }}" class="btn btn-warning" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
+                                <button type="button" class="btn btn-sm btn-success validate-question-btn" 
+                                        data-question-id="{{ $question->id }}"
+                                        data-question-text="{{ Str::limit($question->question_text, 100) }}"
+                                        title="Validate with AI">
+                                    <i class="fas fa-check-double"></i>
+                                </button>
                                 <form action="{{ route('instructor.question-bank.duplicate', $question) }}" method="POST" class="d-inline">
                                     @csrf
                                     <button type="submit" class="btn btn-info" title="Duplicate">
@@ -130,5 +141,47 @@
         <div class="mt-3">{{ $questions->links() }}</div>
     </div>
 </div>
+@include('instructor.question-bank.partials.ai-generate-modal')
 
+@push('scripts')
+<script>
+// YOUR EXISTING SCRIPTS
+
+// ADD AI VALIDATION HANDLER
+$(document).on('click', '.validate-question-btn', function() {
+    const questionId = $(this).data('question-id');
+    const questionText = $(this).data('question-text');
+    
+    Swal.fire({
+        title: 'Validate Question?',
+        html: `<p>AI will analyze this question for quality and provide suggestions.</p>
+               <p class="text-muted small">${questionText}</p>`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-check"></i> Validate',
+        cancelButtonText: 'Cancel',
+        showLoaderOnConfirm: true,
+        preConfirm: () => {
+            return $.ajax({
+                url: `/instructor/ai/validate-question/${questionId}`,
+                method: 'POST',
+                data: { _token: '{{ csrf_token() }}' }
+            });
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Validation Started!',
+                text: 'You will see results in AI dashboard.',
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => {
+                window.location.href = '{{ route("instructor.ai.index") }}';
+            });
+        }
+    });
+});
+</script>
+@endpush
 @endsection

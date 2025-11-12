@@ -15,7 +15,7 @@ class BulkUsersCreatedMail extends Mailable
     public $role;
     public $totalCreated;
     public $csvPath;
-
+    public $filePath;
     /**
      * Create a new message instance.
      *
@@ -27,6 +27,7 @@ class BulkUsersCreatedMail extends Mailable
         $this->role = $role;
         $this->totalCreated = count($users);
         $this->csvPath = $this->generateCsvFile($users);
+        $this->filePath = $filePath;
     }
 
     /**
@@ -34,7 +35,7 @@ class BulkUsersCreatedMail extends Mailable
      */
     public function build()
     {
-        return $this->subject('Bulk User Creation Complete - ' . $this->totalCreated . ' ' . ucfirst($this->role) . '(s)')
+        return $this->subject('Bulk User Creation Complete - Credentials Attached' . $this->totalCreated . ' ' . ucfirst($this->role) . '(s)')
                     ->markdown('emails.bulk-users-created')
                     ->attach($this->csvPath, [
                         'as' => 'user_credentials_' . date('Y-m-d_His') . '.csv',

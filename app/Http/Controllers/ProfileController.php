@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
 use App\Models\AuditLog;
+use App\Mail\PasswordChangedMail;
+use Illuminate\Support\Facades\Mail;
 
 class ProfileController extends Controller
 {
@@ -106,6 +108,11 @@ class ProfileController extends Controller
      */
     public function updatePassword(Request $request): RedirectResponse
     {
+        $user = $request->user();
+        $validated = $request->validate([
+            'current_password' => ['required_if:must_change,false', 'current_password'],
+            'password' => ['required', 'confirmed', Password::defaults()],
+        ]);
         $rules = [
             'password' => [
                 'required',
@@ -133,6 +140,16 @@ class ProfileController extends Controller
             'password' => Hash::make($validated['password']),
             'must_change_password' => false,
         ]);
+
+        try {
+            // Send confirmation email
+            Mail::to($user->email)->queue(new PasswordChangedMail($user));
+        } catch (\Exception $e) {
+            \Log::warning('Failed to send password change email', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+        }
 
         // Log the password change
         \App\Models\AuditLog::log(

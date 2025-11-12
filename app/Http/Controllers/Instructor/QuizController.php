@@ -10,6 +10,7 @@ use App\Models\InstructorSubjectSection;
 use App\Models\QuizAttempt;
 use App\Models\AuditLog;
 use App\Mail\QuizPublishedMail;
+use App\Jobs\SendQuizPublishedNotifications;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -41,6 +42,10 @@ class QuizController extends Controller
             ->pluck('subject_id')
             ->unique();
         $subjects = Subject::whereIn('id', $subjectIds)->get();
+
+        if ($request->has('ai_analyze')) {
+        session()->flash('show_analyze_modal', true);
+    }
 
         return view('instructor.quizzes.index', compact('quizzes', 'subjects'));
     }
@@ -222,12 +227,15 @@ class QuizController extends Controller
                 return back()->with('error', 'Cannot publish quiz without questions.');
             }
             
+            $students = $this->getEnrolledStudents($quiz);
             $wasPublished = $quiz->is_published;
             $quiz->is_published = !$quiz->is_published;
             $quiz->save();
             
             AuditLog::log('quiz_publish_toggled', $quiz);
             
+            SendQuizPublishedNotifications::dispatch($quiz, $students);
+
             // 🔔 SEND EMAIL TO ENROLLED STUDENTS
             foreach ($students as $student) {
                 $settings = $student->user->settings ?? (object)[
@@ -256,6 +264,16 @@ class QuizController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to toggle publish status: ' . $e->getMessage());
         }
+    }
+
+    private function getEnrolledStudents($quiz)
+    {
+        return \App\Models\Student::whereHas('enrollments', function($q) use ($quiz) {
+            $q->where('status', 'enrolled')
+            ->whereHas('section.subjects', function($subQ) use ($quiz) {
+                $subQ->where('subjects.id', $quiz->subject_id);
+            });
+        })->with('user')->get();
     }
 
     private function notifyStudentsAboutQuiz(Quiz $quiz)

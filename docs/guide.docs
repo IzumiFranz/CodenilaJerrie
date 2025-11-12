@@ -1,0 +1,195 @@
+<?php
+
+// ============================================
+// FILE: config/services.php
+// ADD THIS TO YOUR EXISTING config/services.php
+// ============================================
+
+return [
+    
+    // ... existing services ...
+
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'organization' => env('OPENAI_ORGANIZATION', null),
+        'model' => env('OPENAI_MODEL', 'gpt-4o'), // or gpt-3.5-turbo
+        'max_tokens' => env('OPENAI_MAX_TOKENS', 4000),
+        'temperature' => env('OPENAI_TEMPERATURE', 0.7),
+    ],
+
+];
+
+// ============================================
+// FILE: .env
+// ADD THESE ENVIRONMENT VARIABLES
+// ============================================
+
+/*
+
+# OpenAI Configuration
+OPENAI_API_KEY=sk-proj-your-api-key-here
+OPENAI_ORGANIZATION=org-your-org-id-here  # Optional
+OPENAI_MODEL=gpt-4o  # or gpt-3.5-turbo for cheaper option
+OPENAI_MAX_TOKENS=4000
+OPENAI_TEMPERATURE=0.7
+
+# Queue Configuration (for background processing)
+QUEUE_CONNECTION=database  # or redis for better performance
+
+*/
+
+// ============================================
+// INSTALLATION & SETUP INSTRUCTIONS
+// ============================================
+
+/*
+
+STEP 1: Get OpenAI API Key
+---------------------------
+1. Go to https://platform.openai.com/
+2. Sign up or login
+3. Go to API Keys section
+4. Create a new API key
+5. Copy the key (starts with sk-proj-...)
+6. Add to .env file
+
+STEP 2: Install Required Packages
+----------------------------------
+Run these commands:
+
+composer require guzzlehttp/guzzle
+php artisan queue:table
+php artisan migrate
+
+STEP 3: Configure Queue Worker
+-------------------------------
+For Development:
+php artisan queue:work
+
+For Production (use Supervisor):
+Create file: /etc/supervisor/conf.d/laravel-worker.conf
+
+[program:laravel-worker]
+process_name=%(program_name)s_%(process_num)02d
+command=php /path/to/your/project/artisan queue:work database --sleep=3 --tries=3 --max-time=3600
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+user=www-data
+numprocs=4
+redirect_stderr=true
+stdout_logfile=/path/to/your/project/storage/logs/worker.log
+stopwaitsecs=3600
+
+Then run:
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl start laravel-worker:*
+
+STEP 4: Test AI Service
+------------------------
+Run this in tinker (php artisan tinker):
+
+use App\Services\AIService;
+use App\Models\AIJob;
+
+$aiService = new AIService();
+$job = AIJob::create([
+    'user_id' => 1,
+    'subject_id' => 1,
+    'job_type' => 'generate_questions',
+    'parameters' => [
+        'lesson_ids' => [1],
+        'count' => 5,
+        'difficulty' => 'medium',
+        'types' => ['multiple_choice']
+    ],
+    'status' => 'pending'
+]);
+
+// Dispatch job
+\App\Jobs\ProcessAIJob::dispatch($job);
+
+// Check status
+$job->fresh()->status;
+
+STEP 5: Monitor Costs
+---------------------
+OpenAI API costs money. Monitor usage at:
+https://platform.openai.com/usage
+
+Pricing (as of 2024):
+- GPT-4o: $2.50 / 1M input tokens, $10.00 / 1M output tokens
+- GPT-3.5-Turbo: $0.50 / 1M input tokens, $1.50 / 1M output tokens
+
+Estimated costs per operation:
+- Question Generation (10 questions): ~$0.05 - $0.20
+- Question Validation: ~$0.01 - $0.05
+- Quiz Analysis: ~$0.02 - $0.10
+
+STEP 6: Error Handling
+-----------------------
+Monitor logs:
+tail -f storage/logs/laravel.log
+
+Check failed jobs:
+php artisan queue:failed
+
+Retry failed jobs:
+php artisan queue:retry all
+
+STEP 7: Rate Limiting (Optional)
+---------------------------------
+Add rate limiting to prevent abuse:
+
+// In app/Http/Kernel.php
+protected $middlewareGroups = [
+    'api' => [
+        \Illuminate\Routing\Middleware\ThrottleRequests::class.':60,1', // 60 requests per minute
+    ],
+];
+
+STEP 8: Caching (Optional)
+---------------------------
+Cache AI responses to reduce costs:
+
+use Illuminate\Support\Facades\Cache;
+
+protected function callOpenAI($prompt)
+{
+    $cacheKey = 'ai_response_' . md5($prompt);
+    
+    return Cache::remember($cacheKey, 3600, function () use ($prompt) {
+        // Make API call
+    });
+}
+
+TROUBLESHOOTING
+---------------
+
+Problem: "API key not found"
+Solution: Check .env file has OPENAI_API_KEY set
+
+Problem: "Rate limit exceeded"
+Solution: Wait or upgrade OpenAI plan
+
+Problem: "Timeout error"
+Solution: Increase timeout in AIService or use queue
+
+Problem: "Invalid JSON response"
+Solution: Check OpenAI model version, try gpt-4o
+
+Problem: "Queue not processing"
+Solution: Make sure queue worker is running
+
+SECURITY BEST PRACTICES
+------------------------
+1. Never commit .env file
+2. Keep API key secret
+3. Use rate limiting
+4. Monitor API usage
+5. Set spending limits in OpenAI dashboard
+6. Use environment-specific API keys (dev/prod)
+
+*/

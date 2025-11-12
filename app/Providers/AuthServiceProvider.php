@@ -22,6 +22,7 @@ class AuthServiceProvider extends ServiceProvider
         Lesson::class => LessonPolicy::class,
         Quiz::class => QuizPolicy::class,
         QuestionBank::class => QuestionBankPolicy::class,
+        \App\Models\AIJob::class => \App\Policies\AIJobPolicy::class,
     ];
 
     /**

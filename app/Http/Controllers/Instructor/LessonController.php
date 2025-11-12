@@ -10,6 +10,7 @@ use App\Models\InstructorSubjectSection;
 use App\Models\AuditLog;
 use App\Models\LessonAttachment;
 use App\Mail\LessonPublishedMail;
+use App\Jobs\SendLessonPublishedNotifications;
 use App\Services\LessonAttachmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -251,7 +252,15 @@ class LessonController extends Controller
             $wasPublished = $lesson->is_published;
             $lesson->is_published = !$lesson->is_published;
             $lesson->save();
-            
+
+            if ($lesson->is_published) {
+                // Get enrolled students
+                $students = $this->getEnrolledStudents($lesson);
+                
+                // Queue email notifications
+                SendLessonPublishedNotifications::dispatch($lesson, $students);
+            }
+
             AuditLog::log('lesson_publish_toggled', $lesson);
             
             // 🔔 SEND EMAIL TO ENROLLED STUDENTS
@@ -280,6 +289,16 @@ class LessonController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to toggle publish status: ' . $e->getMessage());
         }
+    }
+
+    private function getEnrolledStudents($lesson)
+    {
+        return \App\Models\Student::whereHas('enrollments', function($q) use ($lesson) {
+            $q->where('status', 'enrolled')
+              ->whereHas('section.subjects', function($subQ) use ($lesson) {
+                  $subQ->where('subjects.id', $lesson->subject_id);
+              });
+        })->with('user')->get();
     }
 
     private function notifyStudentsAboutLesson(Lesson $lesson)

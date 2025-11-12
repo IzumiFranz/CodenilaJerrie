@@ -220,7 +220,7 @@ class QuizAttemptController extends Controller
             AuditLog::log('quiz_submitted', $attempt);
 
             DB::commit();
-
+            
             // Send result email + notification
             $settings = $attempt->student->user->settings ?? (object)[
                 'email_quiz_result' => true,

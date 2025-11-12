@@ -46,6 +46,22 @@
                     <i class="fas fa-fw fa-tachometer-alt"></i><span>Dashboard</span>
                 </a>
             </li>
+            <hr class="sidebar-divider">
+
+            <li class="nav-item {{ request()->routeIs('instructor.ai.*') ? 'active' : '' }}">
+                <a class="nav-link" href="{{ route('instructor.ai.index') }}">
+                    <i class="fas fa-fw fa-robot"></i>
+                    <span>AI Assistant</span>
+                    @php
+                        $pendingJobs = \App\Models\AIJob::where('user_id', auth()->id())
+                            ->whereIn('status', ['pending', 'processing'])
+                            ->count();
+                    @endphp
+                    @if($pendingJobs > 0)
+                        <span class="badge badge-warning badge-counter">{{ $pendingJobs }}</span>
+                    @endif
+                </a>
+            </li>
 
             <hr class="sidebar-divider">
             <div class="sidebar-heading">Content</div>

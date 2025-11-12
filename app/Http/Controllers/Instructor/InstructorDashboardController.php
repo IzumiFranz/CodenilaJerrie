@@ -28,6 +28,7 @@ class InstructorDashboardController extends Controller
         $currentSemester = $this->getCurrentSemester();
 
         // Content Statistics
+
         $totalLessons = Lesson::where('instructor_id', $instructor->id)->count();
         $publishedLessons = Lesson::where('instructor_id', $instructor->id)
             ->where('is_published', true)
@@ -141,7 +142,31 @@ class InstructorDashboardController extends Controller
                 'subject' => $subject->subject_name,
                 'average' => round($avgScore, 2)
             ];
+        'quiz_templates' => QuizTemplate::where('instructor_id', $instructor->id)->count(),
+        'recent_quiz_attempts' => $this->getRecentAttempts($instructor),
+        'chart_data' => $this->getChartData($instructor),
         }
+        // ADD THESE AI STATS:
+    $stats['ai_stats'] = [
+        'questions_generated' => AIJob::where('user_id', auth()->id())
+            ->where('job_type', 'generate_questions')
+            ->where('status', 'completed')
+            ->count(),
+        
+        'questions_validated' => AIJob::where('user_id', auth()->id())
+            ->where('job_type', 'validate_question')
+            ->where('status', 'completed')
+            ->count(),
+        
+        'quizzes_analyzed' => AIJob::where('user_id', auth()->id())
+            ->where('job_type', 'analyze_quiz')
+            ->where('status', 'completed')
+            ->count(),
+        
+        'pending_jobs' => AIJob::where('user_id', auth()->id())
+            ->whereIn('status', ['pending', 'processing'])
+            ->count(),
+    ];
 
         return view('instructor.dashboard', compact(
             'totalLessons', 'publishedLessons', 'draftLessons',
@@ -150,7 +175,7 @@ class InstructorDashboardController extends Controller
             'totalAttempts', 'completedAttempts', 'inProgressAttempts', 'averageScore',
             'recentLessons', 'recentQuizzes', 'recentAttempts', 'assignments',
             'subjects', 'performanceBySubject', 'currentAcademicYear', 'currentSemester', 
-            'classAverage', 'hardestQuiz', 'popularLesson', 'strugglingStudents'
+            'classAverage', 'hardestQuiz', 'popularLesson', 'strugglingStudents', 'ai_stats'
         ));
     }
 

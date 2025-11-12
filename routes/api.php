@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Instructor\AIController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\StudentApiController;
 use App\Http\Controllers\Api\LessonController;
@@ -58,4 +59,15 @@ Route::middleware('auth:sanctum')->group(function () {
     // Notifications
     Route::get('/student/notifications', [StudentApiController::class, 'notifications']);
     Route::post('/student/notifications/{notification}/read', [StudentApiController::class, 'markNotificationRead']);
+});
+Route::middleware(['auth:sanctum', 'role:instructor'])->prefix('instructor')->group(function () {
+    
+    // AI Job Status (for AJAX polling)
+    Route::get('/ai/jobs/{job}/status', [App\Http\Controllers\Instructor\AIController::class, 'checkStatus']);
+    
+    // Get lessons by subject (for AJAX)
+    Route::get('/subjects/{subject}/lessons', [App\Http\Controllers\Instructor\AIController::class, 'getLessonsBySubject']);
+    
+    // AI Statistics (for dashboard widgets)
+    Route::get('/ai/statistics', [App\Http\Controllers\Instructor\AIController::class, 'statistics']);
 });

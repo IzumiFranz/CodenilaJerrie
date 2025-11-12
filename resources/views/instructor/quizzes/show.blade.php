@@ -128,9 +128,29 @@
                 <a href="{{ route('instructor.quizzes.results', $quiz) }}" class="btn btn-info btn-block mb-2">
                     <i class="fas fa-chart-bar mr-2"></i>View Results
                 </a>
+                <a href="{{ route('instructor.quizzes.edit', $quiz) }}" class="btn btn-info">
+                    <i class="fas fa-edit mr-2"></i> Edit
+                </a>
                 <a href="{{ route('instructor.quizzes.analytics', $quiz) }}" class="btn btn-primary btn-block mb-2">
                     <i class="fas fa-chart-line mr-2"></i>Analytics
                 </a>
+                @php
+                    $completedAttempts = $quiz->attempts()->where('status', 'completed')->count();
+                @endphp
+                
+                @if($completedAttempts >= 5)
+                <button type="button" class="btn btn-warning analyze-quiz-btn" 
+                        data-quiz-id="{{ $quiz->id }}"
+                        data-quiz-title="{{ $quiz->title }}"
+                        data-attempts-count="{{ $completedAttempts }}">
+                    <i class="fas fa-chart-line mr-2"></i> AI Analysis
+                </button>
+                @else
+                <button type="button" class="btn btn-secondary" disabled 
+                        title="Need at least 5 completed attempts for analysis">
+                    <i class="fas fa-chart-line mr-2"></i> AI Analysis ({{ $completedAttempts }}/5)
+                </button>
+                @endif
                 <form action="{{ route('instructor.quizzes.toggle-publish', $quiz) }}" method="POST">
                     @csrf
                     <button type="submit" class="btn btn-{{ $quiz->is_published ? 'secondary' : 'success' }} btn-block mb-2">
@@ -183,4 +203,52 @@
     </div>
 </div>
 
+@push('scripts')
+<script>
+// YOUR EXISTING SCRIPTS
+
+// ADD AI ANALYSIS HANDLER
+$(document).on('click', '.analyze-quiz-btn', function() {
+    const quizId = $(this).data('quiz-id');
+    const quizTitle = $(this).data('quiz-title');
+    const attemptsCount = $(this).data('attempts-count');
+    
+    Swal.fire({
+        title: 'Analyze Quiz?',
+        html: `<p><strong>${quizTitle}</strong></p>
+               <p>AI will analyze ${attemptsCount} attempts and provide insights on:</p>
+               <ul class="text-left">
+                   <li>Overall difficulty assessment</li>
+                   <li>Question performance analysis</li>
+                   <li>Student performance patterns</li>
+                   <li>Recommendations for improvement</li>
+               </ul>`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-chart-line"></i> Analyze',
+        cancelButtonText: 'Cancel',
+        showLoaderOnConfirm: true,
+        preConfirm: () => {
+            return $.ajax({
+                url: `/instructor/ai/analyze-quiz/${quizId}`,
+                method: 'POST',
+                data: { _token: '{{ csrf_token() }}' }
+            });
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Analysis Started!',
+                text: 'Results will appear in AI dashboard.',
+                timer: 2000,
+                showConfirmButton: false
+            }).then(() => {
+                window.location.href = '{{ route("instructor.ai.index") }}';
+            });
+        }
+    });
+});
+</script>
+@endpush
 @endsection

@@ -47,6 +47,10 @@ class QuestionBankController extends Controller
             ->unique();
         $subjects = Subject::whereIn('id', $subjectIds)->get();
 
+        if ($request->has('ai_generate')) {
+        session()->flash('show_ai_modal', true);
+    }
+
         return view('instructor.question-bank.index', compact('questions', 'subjects'));
     }
 

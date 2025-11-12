@@ -11,8 +11,13 @@ use App\Models\Course;
 use App\Models\Specialization;
 use App\Models\AuditLog;
 use App\Mail\WelcomeMail;
+use App\Jobs\SendBulkUserEmailsJob;
+use App\Jobs\SendBulkCreationSummaryJob;
+use App\Jobs\SendWelcomeEmailJob;
 use App\Mail\BulkUsersCreatedMail;
 use App\Mail\UserCreatedMail;
+use App\Mail\AccountActivatedMail;
+use App\Mail\AccountSuspendedMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -196,6 +201,17 @@ class UserController extends Controller
         ]);
 
         DB::commit();
+        SendWelcomeEmailJob::dispatch($user, $password);
+        \App\Models\Notification::create([
+        'user_id' => auth()->id(),
+        'type' => 'success',
+        'title' => 'User Created Successfully',
+        'message' => "New {$user->role} account created: {$user->username} ({$user->email})",
+    ]);
+        AuditLog::log('welcome_email_queued', $user, [], [
+            'email' => $user->email,
+            'username' => $user->username
+        ]);
 
         // 🔔 SEND EMAILS
         if ($request->input('send_email', true)) {
@@ -447,25 +463,94 @@ class UserController extends Controller
     /**
      * Toggle user status
      */
-    public function toggleStatus(User $user)
+    public function toggleStatus(Request $request, User $user)
     {
         try {
-            $newStatus = $user->status === 'active' ? 'inactive' : 'active';
+            $oldStatus = $user->status;
+            
+            // Get new status from request or toggle
+            if ($request->has('status')) {
+                $newStatus = $request->status;
+            } else {
+                $newStatus = $user->status === 'active' ? 'inactive' : 'active';
+            }
+            
+            // Get suspension reason if provided
+            $reason = $request->input('reason');
             
             $user->update(['status' => $newStatus]);
-
-            AuditLog::log('user_status_changed', $user, 
-                ['status' => $user->status], 
-                ['status' => $newStatus]
+            
+            // Send appropriate email
+            if ($newStatus === 'active' && $oldStatus !== 'active') {
+                // Account activated
+                Mail::to($user->email)->queue(new AccountActivatedMail($user));
+                
+                // In-app notification
+                \App\Models\Notification::create([
+                    'user_id' => $user->id,
+                    'type' => 'success',
+                    'title' => 'Account Activated',
+                    'message' => 'Your account has been activated. You can now access the system.',
+                    'action_url' => route('login'),
+                ]);
+                
+            } elseif ($newStatus === 'suspended' || $newStatus === 'inactive') {
+                // Account suspended/deactivated
+                Mail::to($user->email)->queue(new AccountSuspendedMail($user, $reason));
+                
+                // In-app notification
+                \App\Models\Notification::create([
+                    'user_id' => $user->id,
+                    'type' => 'warning',
+                    'title' => 'Account Suspended',
+                    'message' => $reason ?? 'Your account access has been suspended. Please contact support.',
+                ]);
+            }
+            
+            AuditLog::log('user_status_changed', $user,
+                ['status' => $oldStatus],
+                ['status' => $newStatus, 'reason' => $reason]
             );
-
-            return back()->with('success', "User status changed to {$newStatus}.");
-
+            
+            return back()->with('success', "User status changed to {$newStatus}. Email notification sent.");
+            
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to change status: ' . $e->getMessage());
         }
     }
 
+    public function suspend(Request $request, User $user)
+    {
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+        
+        try {
+            $oldStatus = $user->status;
+            $user->update(['status' => 'suspended']);
+            
+            // Send suspension email with reason
+            Mail::to($user->email)->queue(new AccountSuspendedMail($user, $validated['reason']));
+            
+            // Create notification
+            \App\Models\Notification::create([
+                'user_id' => $user->id,
+                'type' => 'danger',
+                'title' => 'Account Suspended',
+                'message' => 'Your account has been suspended. Reason: ' . $validated['reason'],
+            ]);
+            
+            AuditLog::log('user_suspended', $user,
+                ['status' => $oldStatus],
+                ['status' => 'suspended', 'reason' => $validated['reason']]
+            );
+            
+            return back()->with('success', 'User suspended successfully. Notification email sent.');
+            
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to suspend user: ' . $e->getMessage());
+        }
+    }
     /**
      * Bulk upload users from CSV
      */
@@ -547,6 +632,38 @@ class UserController extends Controller
             }
 
             DB::commit();
+            
+            foreach ($created as $userData) {
+                try {
+                    $user = User::where('email', $userData['email'])->first();
+                    if ($user) {
+                        // Queue individual welcome email
+                        SendWelcomeEmailJob::dispatch($user, $userData['password']);
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Failed to queue welcome email for bulk user', [
+                        'email' => $userData['email'],
+                        'error' => $e->getMessage()
+                    ]);
+                    $failed[] = "Email failed for: " . $userData['email'];
+                }
+            }
+
+            // Also send summary to admin with CSV attachment
+            SendBulkCreationSummaryJob::dispatch($created, auth()->user()->email);
+
+            AuditLog::log('bulk_users_created', null, [], [
+                'role' => $role,
+                'count' => count($created),
+                'emails_queued' => count($created)
+            ]);
+
+            $message = count($created) . " users created successfully. Welcome emails have been sent to each user.";
+            if (!empty($failed)) {
+                $message .= " " . count($failed) . " emails failed to send.";
+            }
+
+            return back()->with('success', $message);
 
             // Send bulk email with CSV attachment if requested
             if ($sendEmail && count($created) > 0) {

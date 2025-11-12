@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\QuizController as AdminQuizController;
 use App\Http\Controllers\Admin\FeedbackController as AdminFeedbackController;
 use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\NotificationController as AdminNotificationController;
+use App\Http\Controllers\Instructor\AIController;
 use App\Http\Controllers\Instructor\InstructorDashboardController;
 use App\Http\Controllers\Instructor\LessonController;
 use App\Http\Controllers\Instructor\QuizController;
@@ -107,6 +108,8 @@ Route::middleware(['auth', 'role:admin', 'password.change'])
     Route::delete('users/{user}/force-delete', [UserController::class, 'forceDelete'])->name('users.force-delete');
     Route::get('trashed-users', [UserController::class, 'trashed'])->name('users.trashed');
     Route::post('users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
+    Route::post('users/{user}/suspend', [UserController::class, 'suspend'])
+    ->name('users.suspend');
     
     // Specialization Management
     Route::resource('specializations', SpecializationController::class);
@@ -260,7 +263,47 @@ Route::middleware(['auth', 'role:instructor', 'password.change'])
     
     // Dashboard
     Route::get('/dashboard', [InstructorDashboardController::class, 'index'])->name('dashboard');
+
+    // AI Job Management
+    Route::prefix('ai')->name('ai.')->group(function () {
+        Route::get('/', [AIController::class, 'index'])->name('index');
+        Route::get('/{job}', [AIController::class, 'show'])->name('show');
+        Route::get('/{job}/status', [AIController::class, 'checkStatus'])->name('status');
+        
+        // Question Generation
+        Route::post('/generate-questions', [AIController::class, 'generateQuestions'])
+            ->name('generate-questions');            
+            // Question Validation
+        Route::post('/validate-question/{question}', [AIController::class, 'validateQuestion'])
+            ->name('validate-question');
+
+        // Quiz Analysis
+        Route::post('/analyze-quiz/{quiz}', [AIController::class, 'analyzeQuiz'])
+            ->name('analyze-quiz');
+   });
+        
+    // Question Statistics (add to existing question-bank routes)
+    Route::get('question-bank/{question}/statistics', [QuestionBankController::class, 'statistics'])
+        ->name('question-bank.statistics');/
+});
+    // AI Dashboard & History
+    Route::get('/ai', [App\Http\Controllers\Instructor\AIController::class, 'index'])->name('ai.index');
+    Route::get('/ai/{job}', [App\Http\Controllers\Instructor\AIController::class, 'show'])->name('ai.show');
+    Route::get('/ai/statistics', [App\Http\Controllers\Instructor\AIController::class, 'statistics'])->name('ai.statistics');
     
+    // AI Actions
+    Route::post('/ai/generate-questions', [App\Http\Controllers\Instructor\AIController::class, 'generateQuestions'])->name('ai.generate-questions');
+    Route::post('/ai/validate-question/{question}', [App\Http\Controllers\Instructor\AIController::class, 'validateQuestion'])->name('ai.validate-question');
+    Route::post('/ai/analyze-quiz/{quiz}', [App\Http\Controllers\Instructor\AIController::class, 'analyzeQuiz'])->name('ai.analyze-quiz');
+    
+    // Job Management
+    Route::get('/ai/job/{job}/status', [App\Http\Controllers\Instructor\AIController::class, 'checkStatus'])->name('ai.check-status');
+    Route::post('/ai/job/{job}/cancel', [App\Http\Controllers\Instructor\AIController::class, 'cancel'])->name('ai.cancel');
+    Route::post('/ai/job/{job}/retry', [App\Http\Controllers\Instructor\AIController::class, 'retry'])->name('ai.retry');
+    
+    // Helper endpoints
+    Route::get('/subjects/{subject}/lessons', [App\Http\Controllers\Instructor\AIController::class, 'getLessonsBySubject'])->name('subjects.lessons');
+
     // Lesson Management
     Route::resource('lessons', LessonController::class);
     Route::post('lessons/{lesson}/toggle-publish', [LessonController::class, 'togglePublish'])
