@@ -11,6 +11,7 @@ use App\Models\Course;
 use App\Models\Specialization;
 use App\Models\AuditLog;
 use App\Mail\WelcomeMail;
+use Illuminate\Support\Facades\Mail;
 use App\Jobs\SendBulkUserEmailsJob;
 use App\Jobs\SendBulkCreationSummaryJob;
 use App\Jobs\SendWelcomeEmailJob;
@@ -18,23 +19,23 @@ use App\Mail\BulkUsersCreatedMail;
 use App\Mail\UserCreatedMail;
 use App\Mail\AccountActivatedMail;
 use App\Mail\AccountSuspendedMail;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
-    use GeneratesUsername;
 
     /**
      * Display a listing of users
      */
     public function index(Request $request)
     {
-        $query = User::with('profile');
+        $query = User::with(['admin', 'instructor', 'student']);
 
         // Search
         if ($request->filled('search')) {
@@ -125,31 +126,6 @@ class UserController extends Controller
                 'must_change_password' => true,
             ]);
 
-            if ($user->isAdmin()) {
-                Admin::create([
-                    'user_id' => $user->id,
-                    'first_name' => $validated['first_name'],
-                    'last_name' => $validated['last_name'],
-                    'middle_name' => $validated['middle_name'] ?? null,
-                ]);
-            } elseif ($user->isInstructor()) {
-                Instructor::create([
-                    'user_id' => $user->id,
-                    'employee_id' => $this->generateEmployeeId(),
-                    'first_name' => $validated['first_name'],
-                    'last_name' => $validated['last_name'],
-                    'middle_name' => $validated['middle_name'] ?? null,
-                ]);
-            } else {
-                Student::create([
-                    'user_id' => $user->id,
-                    'student_number' => $this->generateStudentNumber(),
-                    'first_name' => $validated['first_name'],
-                    'last_name' => $validated['last_name'],
-                    'middle_name' => $validated['middle_name'] ?? null,
-                ]);
-            }
-
             // Create role-specific profile
             switch ($validated['role']) {
                 case 'admin':
@@ -199,8 +175,27 @@ class UserController extends Controller
             'role' => $user->role,
             'email' => $user->email,
         ]);
-
+        
         DB::commit();
+        // After creating user
+        $admins = User::where('role', 'admin')->where('status', 'active')->get();
+
+        foreach ($admins as $admin) {
+            $settings = $admin->settings ?? (object)[
+                'email_new_user' => true,
+                'notification_new_user' => true
+            ];
+            
+            if ($settings->notification_new_user ?? true) {
+                Notification::create([
+                    'user_id' => $admin->id,
+                    'type' => 'success',
+                    'title' => 'New User Created',
+                    'message' => "New {$user->role}: {$user->username}",
+                    'action_url' => route('admin.users.show', $user),
+                ]);
+            }
+        }
         SendWelcomeEmailJob::dispatch($user, $password);
         \App\Models\Notification::create([
         'user_id' => auth()->id(),
@@ -276,14 +271,32 @@ class UserController extends Controller
         return 'EMP-' . $year . '-' . $sequence;
     }
 
+    private function generateStudentNumber(): string
+    {
+        $year = date('Y');
+        
+        $lastStudent = Student::where('student_number', 'like', 'ST-' . $year . '-%')
+            ->orderBy('id', 'desc')
+            ->first();
+        
+        if ($lastStudent) {
+            preg_match('/-(\d+)$/', $lastStudent->student_number, $matches);
+            $lastNumber = isset($matches[1]) ? (int)$matches[1] : 0;
+            $nextNumber = $lastNumber + 1;
+        } else {
+            $nextNumber = 1;
+        }
+        
+        $sequence = str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+        return 'ST-' . $year . '-' . $sequence;
+    }
 
-    /**
     /**
      * Display the specified user.
      */
     public function show(User $user)
     {
-        $user->load('profile', 'auditLogs', 'notifications');
+        $user->load(['admin', 'instructor.specialization', 'student.course', 'auditLogs', 'notifications']);
 
         return view('admin.users.show', compact('user'));
     }
@@ -293,7 +306,7 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
-        $user->load('profile');
+        $user->load(['admin', 'instructor', 'student']);
         $courses = Course::where('is_active', true)->get();
         $specializations = Specialization::where('is_active', true)->get();
 
@@ -305,6 +318,9 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user)
     {
+        // Load relationships to avoid errors
+        $user->load(['admin', 'instructor', 'student']);
+        
         $validated = $request->validate([
             'email' => ['required', 'email', 'unique:users,email,' . $user->id],
             'status' => ['required', 'in:active,inactive,suspended'],
@@ -316,11 +332,11 @@ class UserController extends Controller
             // Role-specific fields
             'position' => ['nullable', 'string', 'max:255'],
             'office' => ['nullable', 'string', 'max:255'],
-            'employee_id' => ['nullable', 'string', 'unique:instructors,employee_id,' . ($user->instructor->id ?? 'NULL')],
+            'employee_id' => ['nullable', 'string', 'unique:instructors,employee_id,' . ($user->instructor?->id ?? 'NULL')],
             'specialization_id' => ['nullable', 'exists:specializations,id'],
             'department' => ['nullable', 'string', 'max:255'],
             'hire_date' => ['nullable', 'date'],
-            'student_number' => ['nullable', 'string', 'unique:students,student_number,' . ($user->student->id ?? 'NULL')],
+            'student_number' => ['nullable', 'string', 'unique:students,student_number,' . ($user->student?->id ?? 'NULL')],
             'course_id' => ['nullable', 'exists:courses,id'],
             'year_level' => ['nullable', 'integer', 'min:1', 'max:6'],
             'address' => ['nullable', 'string', 'max:500'],
@@ -412,7 +428,7 @@ class UserController extends Controller
     public function trashed()
     {
         $users = User::onlyTrashed()
-            ->with('profile')
+            ->with(['admin', 'instructor', 'student'])
             ->orderBy('deleted_at', 'desc')
             ->paginate(20);
 

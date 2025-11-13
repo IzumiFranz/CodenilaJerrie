@@ -1,0 +1,161 @@
+<?php
+
+namespace App\Http\Controllers\Instructor;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\UserSetting;
+use App\Models\AuditLog;
+
+class SettingsController extends Controller
+{
+    /**
+     * Display settings page
+     */
+    public function index(Request $request)
+    {
+        $user = $request->user();
+        
+        // Get or create user settings
+        $settings = UserSetting::firstOrCreate(
+            ['user_id' => $user->id],
+            [
+                // Notification preferences
+                'email_student_enrolled' => true,
+                'email_quiz_submitted' => true,
+                'email_feedback_submitted' => true,
+                'email_low_performance_alert' => true,
+                'email_announcement' => true,
+                
+                // In-app notification preferences
+                'notification_student_enrolled' => true,
+                'notification_quiz_submitted' => true,
+                'notification_feedback_submitted' => true,
+                'notification_low_performance_alert' => true,
+                'notification_announcement' => true,
+                
+                // Display preferences
+                'theme' => 'light',
+                'language' => 'en',
+                'timezone' => 'Asia/Manila',
+                'items_per_page' => 20,
+                
+                // Quiz defaults
+                'default_quiz_time_limit' => 30,
+                'default_passing_score' => 75,
+                'default_max_attempts' => 3,
+            ]
+        );
+        
+        return view('instructor.settings.index', compact('settings'));
+    }
+    
+    /**
+     * Update notification preferences
+     */
+    public function updateNotifications(Request $request)
+    {
+        $user = $request->user();
+        $settings = UserSetting::firstOrCreate(['user_id' => $user->id]);
+        
+        $validated = $request->validate([
+            'email_student_enrolled' => 'boolean',
+            'email_quiz_submitted' => 'boolean',
+            'email_feedback_submitted' => 'boolean',
+            'email_low_performance_alert' => 'boolean',
+            'email_announcement' => 'boolean',
+            'notification_student_enrolled' => 'boolean',
+            'notification_quiz_submitted' => 'boolean',
+            'notification_feedback_submitted' => 'boolean',
+            'notification_low_performance_alert' => 'boolean',
+            'notification_announcement' => 'boolean',
+        ]);
+        
+        // Set false for unchecked checkboxes
+        foreach ($validated as $key => $value) {
+            $validated[$key] = $request->has($key);
+        }
+        
+        $settings->update($validated);
+        
+        AuditLog::log('settings_updated', null, [], ['section' => 'notifications']);
+        
+        return back()->with('success', 'Notification preferences updated successfully.');
+    }
+    
+    /**
+     * Update display preferences
+     */
+    public function updateDisplay(Request $request)
+    {
+        $user = $request->user();
+        $settings = UserSetting::firstOrCreate(['user_id' => $user->id]);
+        
+        $validated = $request->validate([
+            'theme' => 'required|in:light,dark',
+            'language' => 'required|in:en,es,fr,tl',
+            'timezone' => 'required|string',
+            'items_per_page' => 'required|integer|min:10|max:100',
+        ]);
+        
+        $settings->update($validated);
+        
+        AuditLog::log('settings_updated', null, [], ['section' => 'display']);
+        
+        return back()->with('success', 'Display preferences updated successfully.');
+    }
+    
+    /**
+     * Update quiz defaults
+     */
+    public function updateQuizDefaults(Request $request)
+    {
+        $user = $request->user();
+        $settings = UserSetting::firstOrCreate(['user_id' => $user->id]);
+        
+        $validated = $request->validate([
+            'default_quiz_time_limit' => 'required|integer|min:5|max:300',
+            'default_passing_score' => 'required|integer|min:1|max:100',
+            'default_max_attempts' => 'required|integer|min:1|max:10',
+        ]);
+        
+        $settings->update($validated);
+        
+        AuditLog::log('settings_updated', null, [], ['section' => 'quiz_defaults']);
+        
+        return back()->with('success', 'Quiz defaults updated successfully.');
+    }
+    
+    /**
+     * Reset settings to default
+     */
+    public function reset(Request $request)
+    {
+        $user = $request->user();
+        $settings = UserSetting::firstOrCreate(['user_id' => $user->id]);
+        
+        $settings->update([
+            'email_student_enrolled' => true,
+            'email_quiz_submitted' => true,
+            'email_feedback_submitted' => true,
+            'email_low_performance_alert' => true,
+            'email_announcement' => true,
+            'notification_student_enrolled' => true,
+            'notification_quiz_submitted' => true,
+            'notification_feedback_submitted' => true,
+            'notification_low_performance_alert' => true,
+            'notification_announcement' => true,
+            'theme' => 'light',
+            'language' => 'en',
+            'timezone' => 'Asia/Manila',
+            'items_per_page' => 20,
+            'default_quiz_time_limit' => 30,
+            'default_passing_score' => 75,
+            'default_max_attempts' => 3,
+        ]);
+        
+        AuditLog::log('settings_reset', null);
+        
+        return back()->with('success', 'Settings reset to default successfully.');
+    }
+}

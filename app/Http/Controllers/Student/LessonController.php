@@ -6,9 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Lesson;
 use App\Models\Subject;
 use App\Models\AuditLog;
+use App\Models\LessonView;
+use App\Models\Student;
 use Illuminate\Http\Request;
 use App\Models\LessonAttachment;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use ZipArchive;
 
 class LessonController extends Controller
@@ -17,6 +20,10 @@ class LessonController extends Controller
     {
         $user = auth()->user();
         $student = $user->student;
+        
+        if (!$student) {
+            abort(403, 'User is not a student.');
+        }
 
         // Get enrolled subjects
         $currentAcademicYear = now()->format('Y') . '-' . (now()->year + 1);
@@ -62,6 +69,11 @@ class LessonController extends Controller
     public function show(Lesson $lesson)
     {
         $user = auth()->user();
+        $student = $user->student;
+        
+        if (!$student) {
+            abort(403, 'User is not a student.');
+        }
         
         // Check authorization using policy
         $this->authorize('view', $lesson);
@@ -71,7 +83,7 @@ class LessonController extends Controller
 
         // Log lesson view
         AuditLog::log('lesson_viewed', $lesson, [], [
-            'student_id' => $user->student->id
+            'student_id' => $student->id
         ]);
 
         $lesson->load(['subject.course', 'instructor.user', 
@@ -249,30 +261,6 @@ class LessonController extends Controller
         }
     }
 
-    public function statistics(Lesson $lesson)
-    {
-        $this->authorize('view', $lesson);
-        
-        $stats = $lesson->getViewStats();
-        
-        // Get detailed view data
-        $views = LessonView::where('lesson_id', $lesson->id)
-            ->with('student.user')
-            ->orderBy('viewed_at', 'desc')
-            ->paginate(20);
-        
-        // Get top viewers
-        $topViewers = LessonView::where('lesson_id', $lesson->id)
-            ->select('student_id', DB::raw('COUNT(*) as view_count'), DB::raw('SUM(duration_seconds) as total_time'))
-            ->groupBy('student_id')
-            ->orderBy('view_count', 'desc')
-            ->limit(10)
-            ->with('student.user')
-            ->get();
-        
-        return view('instructor.lessons.statistics', compact('lesson', 'stats', 'views', 'topViewers'));
-    }
-
     // Helper method
     private function studentHasAccessToLesson(Student $student, Lesson $lesson): bool
     {
@@ -298,13 +286,12 @@ class LessonController extends Controller
      */
     public function downloadAttachment(Lesson $lesson, LessonAttachment $attachment)
     {
-        // Check if student is enrolled
-        $enrollment = $lesson->subject->enrollments()
-            ->where('student_id', auth()->id())
-            ->first();
+        // Check if student has access to this lesson
+        $student = auth()->user()->student;
+        $hasAccess = $this->studentHasAccessToLesson($student, $lesson);
 
-        if (!$enrollment) {
-            abort(403, 'You are not enrolled in this subject.');
+        if (!$hasAccess) {
+            abort(403, 'You are not enrolled in a section for this subject.');
         }
 
         // Check if attachment belongs to this lesson
@@ -318,18 +305,16 @@ class LessonController extends Controller
         }
 
         try {
-            // Record download
+            // Record download (student_id column stores user_id)
             $attachment->recordDownload(auth()->id());
 
             // Audit log
-            activity()
-                ->performedOn($attachment)
-                ->causedBy(auth()->user())
-                ->withProperties([
-                    'lesson_id' => $lesson->id,
-                    'filename' => $attachment->original_filename,
-                ])
-                ->log('Downloaded lesson attachment');
+            AuditLog::log('lesson_attachment_downloaded', $lesson, [
+                'attachment_id' => $attachment->id,
+                'filename' => $attachment->original_filename,
+            ], [
+                'student_id' => auth()->user()->student->id,
+            ]);
 
             // Return file download
             return Storage::download($attachment->file_path, $attachment->original_filename);
@@ -344,13 +329,12 @@ class LessonController extends Controller
      */
     public function viewAttachment(Lesson $lesson, LessonAttachment $attachment)
     {
-        // Check if student is enrolled
-        $enrollment = $lesson->subject->enrollments()
-            ->where('student_id', auth()->id())
-            ->first();
+        // Check if student has access to this lesson
+        $student = auth()->user()->student;
+        $hasAccess = $this->studentHasAccessToLesson($student, $lesson);
 
-        if (!$enrollment) {
-            abort(403, 'You are not enrolled in this subject.');
+        if (!$hasAccess) {
+            abort(403, 'You are not enrolled in a section for this subject.');
         }
 
         // Check if attachment belongs to this lesson
@@ -381,16 +365,15 @@ class LessonController extends Controller
     }
     public function downloadAllAttachments(Lesson $lesson)
     {
-        // Check if student is enrolled
-        $enrollment = $lesson->subject->enrollments()
-            ->where('student_id', auth()->id())
-            ->first();
+        // Check if student has access to this lesson
+        $student = auth()->user()->student;
+        $hasAccess = $this->studentHasAccessToLesson($student, $lesson);
 
-        if (!$enrollment) {
-            abort(403, 'You are not enrolled in this subject.');
+        if (!$hasAccess) {
+            abort(403, 'You are not enrolled in a section for this subject.');
         }
 
-        $attachments = $lesson->visibleAttachments;
+        $attachments = $lesson->visibleAttachments()->get();
 
         if ($attachments->isEmpty()) {
             return back()->with('error', 'No attachments available.');
@@ -427,13 +410,11 @@ class LessonController extends Controller
             $zip->close();
 
             // Audit log
-            activity()
-                ->performedOn($lesson)
-                ->causedBy(auth()->user())
-                ->withProperties([
-                    'count' => $attachments->count(),
-                ])
-                ->log('Downloaded all lesson attachments as ZIP');
+            AuditLog::log('lesson_attachments_downloaded_all', $lesson, [
+                'count' => $attachments->count(),
+            ], [
+                'student_id' => auth()->user()->student->id,
+            ]);
 
             // Return ZIP file and delete after send
             return response()->download($zipPath, 'lesson-attachments.zip')->deleteFileAfterSend(true);

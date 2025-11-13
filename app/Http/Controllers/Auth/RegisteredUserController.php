@@ -19,8 +19,6 @@ class RegisteredUserController extends Controller
     /**
      * Display the registration view.
      */
-    use GeneratesUsername;
-
     public function create(): View
     {
         // Check if public registration is disabled

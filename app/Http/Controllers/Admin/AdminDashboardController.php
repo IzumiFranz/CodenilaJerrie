@@ -67,7 +67,7 @@ class AdminDashboardController extends Controller
         // Feedback Statistics
         $totalFeedback = Feedback::count();
         $pendingFeedback = Feedback::where('status', 'pending')->count();
-        $resolvedFeedback = Feedback::where('status', 'resolved')->count();
+        $resolvedFeedback = Feedback::where('status', 'responded')->count();
 
         // Recent Activities (Last 10)
         $recentActivities = AuditLog::with('user')
@@ -76,10 +76,11 @@ class AdminDashboardController extends Controller
             ->get();
 
         // Recent Users (Last 5)
-        $recentUsers = User::with('profile')
-            ->orderBy('created_at', 'desc')
-            ->limit(5)
-            ->get();
+        $recentUsers = User::with([
+            'student',
+            'instructor',
+            'admin'
+        ])->orderBy('created_at', 'desc')->limit(5)->get();
 
         // Enrollments by Course (Top 5)
         $enrollmentsByCourse = Enrollment::select('sections.course_id', DB::raw('count(*) as total'))

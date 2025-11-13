@@ -52,11 +52,6 @@ class QuizController extends Controller
             $query->where('subject_id', $request->subject_id);
         }
 
-        // Filter by category (if quiz has category)
-        if ($request->filled('category')) {
-            $query->where('category_id', $request->category);
-        }
-
         // Filter by difficulty (if quiz has difficulty)
         if ($request->filled('difficulty')) {
             $query->where('difficulty', $request->difficulty);
@@ -127,11 +122,9 @@ class QuizController extends Controller
             ->where('status', 'completed')
             ->avg('score') ?? 0;
 
-        $categories = \App\Models\Category::all();
 
         return view('student.quizzes.index', compact(
             'quizzes',
-            'categories',
             'enrolledSubjects',
             'totalQuizzes',
             'completedQuizzes',

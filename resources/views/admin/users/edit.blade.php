@@ -19,26 +19,26 @@
                     @csrf
                     @method('PUT')
                     
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Email <span class="text-danger">*</span></label>
-                                <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" value="{{ old('email', $user->email) }}" required>
-                                @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
+                    {{-- Role Display (Cannot be changed) --}}
+                        <div class="form-group">
+                            <label>Role</label>
+                            <input type="text" class="form-control" value="{{ ucfirst($user->role) }}" disabled>
+                            <small class="form-text text-muted">Role cannot be changed after creation</small>
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Status <span class="text-danger">*</span></label>
-                                <select name="status" class="form-control @error('status') is-invalid @enderror" required>
-                                    <option value="active" {{ old('status', $user->status) == 'active' ? 'selected' : '' }}>Active</option>
-                                    <option value="inactive" {{ old('status', $user->status) == 'inactive' ? 'selected' : '' }}>Inactive</option>
-                                    <option value="suspended" {{ old('status', $user->status) == 'suspended' ? 'selected' : '' }}>Suspended</option>
-                                </select>
-                                @error('status')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
+                        <div class="form-group">
+                            <label for="status">Status <span class="text-danger">*</span></label>
+                            <select name="status" id="status" class="form-control @error('status') is-invalid @enderror" required>
+                                <option value="active" {{ old('status', $user->status) === 'active' ? 'selected' : '' }}>Active</option>
+                                <option value="inactive" {{ old('status', $user->status) === 'inactive' ? 'selected' : '' }}>Inactive</option>
+                                <option value="suspended" {{ old('status', $user->status) === 'suspended' ? 'selected' : '' }}>Suspended</option>
+                            </select>
+                            @error('status')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
-                    </div>
+
+                        <hr>
+                <h6 class="font-weight-bold text-primary mb-3">Basic Information</h6>
 
                     <div class="row">
                         <div class="col-md-4">
@@ -63,102 +63,190 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Phone</label>
-                        <input type="text" name="phone" class="form-control" value="{{ old('phone', $user->profile->phone ?? '') }}">
-                    </div>
+                    <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="email">Email Address <span class="text-danger">*</span></label>
+                                    <input type="email" name="email" id="email" 
+                                           class="form-control @error('email') is-invalid @enderror" 
+                                           value="{{ old('email', $user->email) }}" required>
+                                    @error('email')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="phone">Phone Number</label>
+                                    <input type="text" name="phone" id="phone" 
+                                           class="form-control @error('phone') is-invalid @enderror" 
+                                           value="{{ old('phone', $user->profile->phone ?? '') }}">
+                                    @error('phone')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+
+                    <hr>
 
                     @if($user->isAdmin())
-                    <hr><h5>Admin Information</h5>
+                    <h6 class="font-weight-bold text-primary mb-3">Admin Information</h6>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label class="form-label">Position</label>
-                                <input type="text" name="position" class="form-control" value="{{ old('position', $user->admin->position ?? '') }}">
+                                <label for="position">Position</label>
+                                <input type="text" name="position" id="position" 
+                                        class="form-control @error('position') is-invalid @enderror" 
+                                        value="{{ old('position', $user->admin->position ?? '') }}">
+                                    @error('position')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label class="form-label">Office</label>
-                                <input type="text" name="office" class="form-control" value="{{ old('office', $user->admin->office ?? '') }}">
+                                <label for="office">Office</label>
+                                <input type="text" name="office" id="office" 
+                                        class="form-control @error('office') is-invalid @enderror" 
+                                        value="{{ old('office', $user->admin->office ?? '') }}">
+                                    @error('office')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
                             </div>
                         </div>
-                    </div>
                     @endif
 
                     @if($user->isInstructor())
-                    <hr><h5>Instructor Information</h5>
+                    <hr><h6 class="font-weight-bold text-success mb-3">Instructor Details</h6>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label class="form-label">Employee ID</label>
-                                <input type="text" name="employee_id" class="form-control" value="{{ old('employee_id', $user->instructor->employee_id ?? '') }}" readonly>
+                                <label for="employee_id">Employee ID</label>
+                                <input type="text" name="employee_id" id="employee_id" 
+                                        class="form-control @error('employee_id') is-invalid @enderror" 
+                                        value="{{ old('employee_id', $user->instructor->employee_id ?? '') }}">
+                                @error('employee_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Specialization</label>
-                                <select name="specialization_id" class="form-control">
-                                    <option value="">Select Specialization</option>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                                <label for="specialization_id">Specialization</label>
+                                <select name="specialization_id" id="specialization_id" 
+                                        class="form-control @error('specialization_id') is-invalid @enderror">
+                                    <option value="">-- Select Specialization --</option>
                                     @foreach($specializations as $spec)
-                                    <option value="{{ $spec->id }}" {{ old('specialization_id', $user->instructor->specialization_id ?? '') == $spec->id ? 'selected' : '' }}>{{ $spec->name }}</option>
+                                        <option value="{{ $spec->id }}" 
+                                            {{ old('specialization_id', $user->instructor->specialization_id ?? '') == $spec->id ? 'selected' : '' }}>
+                                            {{ $spec->name }}
+                                        </option>
                                     @endforeach
                                 </select>
+                                @error('specialization_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label class="form-label">Department</label>
-                                <input type="text" name="department" class="form-control" value="{{ old('department', $user->instructor->department ?? '') }}">
+                                <label for="department">Department</label>
+                                <input type="text" name="department" id="department" 
+                                        class="form-control @error('department') is-invalid @enderror" 
+                                        value="{{ old('department', $user->instructor->department ?? '') }}">
+                                    @error('department')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
                             </div>
-                        </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label class="form-label">Hire Date</label>
-                                <input type="date" name="hire_date" class="form-control" value="{{ old('hire_date', $user->instructor->hire_date?->format('Y-m-d') ?? '') }}">
+                                    <label for="hire_date">Hire Date</label>
+                                    <input type="date" name="hire_date" id="hire_date" 
+                                            class="form-control @error('hire_date') is-invalid @enderror" 
+                                            value="{{ old('hire_date', $user->instructor->hire_date ? $user->instructor->hire_date->format('Y-m-d') : '') }}">
+                                    @error('hire_date')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
                             </div>
                         </div>
-                    </div>
                     @endif
-
+<hr>
                     @if($user->isStudent())
-                    <hr><h5>Student Information</h5>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="form-label">Student Number</label>
-                                <input type="text" name="student_number" class="form-control" value="{{ old('student_number', $user->student->student_number ?? '') }}" readonly>
+                    <h6 class="font-weight-bold text-info mb-3">Student Details</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="student_number">Student Number</label>
+                                        <input type="text" name="student_number" id="student_number" 
+                                               class="form-control @error('student_number') is-invalid @enderror" 
+                                               value="{{ old('student_number', $user->student->student_number ?? '') }}">
+                                        @error('student_number')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="course_id">Course</label>
+                                        <select name="course_id" id="course_id" 
+                                                class="form-control @error('course_id') is-invalid @enderror">
+                                            <option value="">-- Select Course --</option>
+                                            @foreach($courses as $course)
+                                                <option value="{{ $course->id }}" 
+                                                    {{ old('course_id', $user->student->course_id ?? '') == $course->id ? 'selected' : '' }}>
+                                                    {{ $course->course_name }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        @error('course_id')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="form-label">Course</label>
-                                <select name="course_id" class="form-control">
-                                    <option value="">Select Course</option>
-                                    @foreach($courses as $course)
-                                    <option value="{{ $course->id }}" {{ old('course_id', $user->student->course_id ?? '') == $course->id ? 'selected' : '' }}>{{ $course->course_name }}</option>
-                                    @endforeach
-                                </select>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="year_level">Year Level</label>
+                                        <select name="year_level" id="year_level" 
+                                                class="form-control @error('year_level') is-invalid @enderror">
+                                            <option value="">-- Select Year Level --</option>
+                                            @for($i = 1; $i <= 6; $i++)
+                                                <option value="{{ $i }}" 
+                                                    {{ old('year_level', $user->student->year_level ?? '') == $i ? 'selected' : '' }}>
+                                                    {{ $i }}
+                                                </option>
+                                            @endfor
+                                        </select>
+                                        @error('year_level')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Admission Date</label>
+                                        <input type="text" class="form-control" 
+                                               value="{{ $user->student->admission_date ? $user->student->admission_date->format('M d, Y') : 'N/A' }}" 
+                                               disabled>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-4">
                             <div class="form-group">
-                                <label class="form-label">Year Level</label>
-                                <select name="year_level" class="form-control">
-                                    @for($i = 1; $i <= 4; $i++)
-                                    <option value="{{ $i }}" {{ old('year_level', $user->student->year_level ?? 1) == $i ? 'selected' : '' }}>{{ $i }}{{ $i == 1 ? 'st' : ($i == 2 ? 'nd' : ($i == 3 ? 'rd' : 'th')) }} Year</option>
-                                    @endfor
-                                </select>
+                                <label for="address">Address</label>
+                                <textarea name="address" id="address" rows="3" 
+                                          class="form-control @error('address') is-invalid @enderror">{{ old('address', $user->student->address ?? '') }}</textarea>
+                                @error('address')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Address</label>
-                        <textarea name="address" class="form-control" rows="3">{{ old('address', $user->student->address ?? '') }}</textarea>
-                    </div>
-                    @endif
+                        @endif
 
                     <hr>
                     <div class="d-flex justify-content-end">

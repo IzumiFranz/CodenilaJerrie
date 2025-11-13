@@ -20,6 +20,8 @@ class ProfileController extends Controller
     public function edit(Request $request)
     {
         $user = $request->user();
+        // Load relationships to ensure profile accessor works
+        $user->load(['admin', 'instructor.specialization', 'student.course']);
         $profile = $user->profile;
 
         return view('profile.edit', compact('user', 'profile'));
@@ -31,7 +33,13 @@ class ProfileController extends Controller
     public function update(Request $request)
     {
         $user = $request->user();
+        // Load relationships to ensure profile accessor works
+        $user->load(['admin', 'instructor.specialization', 'student.course']);
         $profile = $user->profile;
+        
+        if (!$profile) {
+            return back()->with('error', 'Profile not found. Please contact administrator.');
+        }
 
         // Validate based on role
         $rules = [

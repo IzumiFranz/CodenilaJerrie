@@ -20,7 +20,7 @@ class ExportController extends Controller
      */
     public function exportUsers(Request $request)
     {
-        $query = User::with('profile');
+        $query = User::with(['admin', 'instructor', 'student']);
 
         // Apply filters from request
         if ($request->filled('role')) {
@@ -221,7 +221,7 @@ class ExportController extends Controller
      */
     public function generateUsersPDF(Request $request)
     {
-        $query = User::with('profile');
+        $query = User::with(['admin', 'instructor', 'student']);
 
         if ($request->filled('role')) {
             $query->where('role', $request->role);

@@ -17,7 +17,7 @@
             <a href="{{ route('student.quiz-attempts.review', $attempt->id) }}" class="btn btn-info me-2">
                 <i class="fas fa-eye me-1"></i> Review Answers
             </a>
-            <a href="{{ route('student.quiz-attempts.pdf', $attempt->id) }}" class="btn btn-danger" target="_blank">
+            <a href="{{ route('student.quiz-attempts.export-pdf', $attempt->id) }}" class="btn btn-danger" target="_blank">
                 <i class="fas fa-file-pdf me-1"></i> Export PDF
             </a>
         </div>

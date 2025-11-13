@@ -10,14 +10,13 @@
                     <input type="text" 
                         wire:model.live.debounce.300ms="search" 
                         class="form-control" 
-                        placeholder="Search feedback by user or comment...">
+                        placeholder="Search feedback by user, subject or message...">
                 </div>
                 <div class="col-md-3 mb-3">
                     <select wire:model.live="status" class="form-control">
                         <option value="">All Status</option>
                         <option value="pending">Pending</option>
-                        <option value="reviewed">Reviewed</option>
-                        <option value="resolved">Resolved</option>
+                        <option value="responded">Responded</option>
                     </select>
                 </div>
                 <div class="col-md-2 mb-3">
@@ -63,10 +62,8 @@
                         <div>
                             @if($item->status == 'pending')
                                 <span class="badge badge-warning">Pending</span>
-                            @elseif($item->status == 'reviewed')
-                                <span class="badge badge-info">Reviewed</span>
                             @else
-                                <span class="badge badge-success">Resolved</span>
+                                <span class="badge badge-success">Responded</span>
                             @endif
                         </div>
                     </div>
@@ -102,14 +99,15 @@
                             </div>
                         @endif
 
-                        <!-- Comment -->
-                        <p class="mb-3">{{ $item->comment }}</p>
+                        <!-- Message -->
+                        <p class="mb-3"><strong>Subject:</strong> {{ $item->subject }}</p>
+                        <p class="mb-3">{{ $item->message }}</p>
 
                         <!-- Admin Response -->
-                        @if($item->admin_response)
+                        @if($item->response)
                             <div class="alert alert-info mb-0">
                                 <strong><i class="fas fa-reply"></i> Admin Response:</strong>
-                                <p class="mb-0 mt-2">{{ $item->admin_response }}</p>
+                                <p class="mb-0 mt-2">{{ $item->response }}</p>
                                 <small class="text-muted">
                                     Responded {{ \Carbon\Carbon::parse($item->updated_at)->diffForHumans() }}
                                 </small>
@@ -126,11 +124,11 @@
                             <a href="{{ route('admin.feedback.show', $item) }}" class="btn btn-sm btn-info">
                                 <i class="fas fa-eye"></i> View Details
                             </a>
-                            @if($item->status !== 'resolved')
+                            @if($item->status !== 'responded')
                                 <button wire:click="markAsResolved({{ $item->id }})" 
-                                    wire:confirm="Mark this feedback as resolved?"
+                                    wire:confirm="Mark this feedback as responded?"
                                     class="btn btn-sm btn-success">
-                                    <i class="fas fa-check"></i> Mark Resolved
+                                    <i class="fas fa-check"></i> Mark Responded
                                 </button>
                             @endif
                         </div>

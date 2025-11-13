@@ -43,7 +43,7 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'Login successful',
             'data' => [
-                'user' => $user->load('profile'),
+                'user' => $user->load(['admin', 'instructor', 'student']),
                 'token' => $token,
                 'must_change_password' => $user->must_change_password
             ]
@@ -85,7 +85,7 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Profile updated successfully',
-            'data' => $user->load('profile')
+            'data' => $user->load(['admin', 'instructor', 'student'])
         ]);
     }
     

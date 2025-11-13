@@ -12,19 +12,22 @@
                 <h3 class="fw-bold text-primary mb-1">{{ $quiz->title }}</h3>
                 <p class="text-muted mb-2">{{ $quiz->description }}</p>
                 <div class="d-flex flex-wrap gap-3 small text-muted">
-                    <span><i class="fas fa-book me-1"></i> Subject: {{ $quiz->subject->name ?? 'N/A' }}</span>
-                    <span><i class="fas fa-user-tie me-1"></i> Instructor: {{ $quiz->instructor->name ?? 'N/A' }}</span>
+                    <span><i class="fas fa-book me-1"></i> Subject: {{ $quiz->subject->subject_name ?? 'N/A' }}</span>
+                    <span><i class="fas fa-user-tie me-1"></i> Instructor: {{ $quiz->instructor->full_name ?? 'N/A' }}</span>
                     <span><i class="fas fa-question-circle me-1"></i> {{ $quiz->questions->count() }} Questions</span>
-                    <span><i class="fas fa-clock me-1"></i> {{ $quiz->duration }} mins</span>
+                    <span><i class="fas fa-clock me-1"></i> {{ $quiz->time_limit ?? $quiz->estimated_duration ?? 'N/A' }} mins</span>
                     <span><i class="fas fa-star me-1"></i> Passing Score: {{ $quiz->passing_score }}%</span>
                 </div>
             </div>
             <div class="mt-3 mt-md-0">
-                @if($quiz->attempts->where('student_id', auth()->user()->student->id)->where('status', 'in_progress')->first())
-                    <a href="{{ route('student.quiz.attempt.continue', $quiz) }}" class="btn btn-warning shadow-sm">
+                @php
+                    $inProgressAttempt = $quiz->attempts->where('student_id', auth()->user()->student->id)->where('status', 'in_progress')->first();
+                @endphp
+                @if($inProgressAttempt)
+                    <a href="{{ route('student.quiz-attempts.take', $inProgressAttempt->id) }}" class="btn btn-warning shadow-sm">
                         <i class="fas fa-sync-alt me-1"></i> Resume Quiz
                     </a>
-                @elseif($quiz->canAttempt(auth()->user()->student))
+                @elseif($quiz->studentCanTakeQuiz(auth()->user()->student))
                     <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#startQuizModal">
                         <i class="fas fa-play-circle me-1"></i> Start Quiz
                     </button>
@@ -179,7 +182,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <a href="{{ route('student.quiz.start', $quiz) }}" class="btn btn-primary">
+                <a href="{{ route('student.quiz-attempts.start', $quiz) }}" class="btn btn-primary">
                     Start Now
                 </a>
             </div>
@@ -195,10 +198,30 @@
                 <h5 class="modal-title" id="feedbackModalLabel"><i class="fas fa-comment-dots me-2"></i> Quiz Feedback</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('student.quiz.feedback', $quiz) }}" method="POST">
+            <form action="{{ route('student.feedback.store') }}" method="POST">
+                <input type="hidden" name="type" value="quiz">
+                <input type="hidden" name="quiz_id" value="{{ $quiz->id }}">
                 @csrf
                 <div class="modal-body">
-                    <textarea name="feedback" class="form-control" rows="4" placeholder="Write your feedback here..." required></textarea>
+                    <div class="form-group mb-3">
+                        <label for="feedback_subject">Subject</label>
+                        <input type="text" name="subject" class="form-control" id="feedback_subject" placeholder="Feedback subject" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="feedback_rating">Rating (Optional)</label>
+                        <select name="rating" class="form-control" id="feedback_rating">
+                            <option value="">No rating</option>
+                            <option value="1">1 Star</option>
+                            <option value="2">2 Stars</option>
+                            <option value="3">3 Stars</option>
+                            <option value="4">4 Stars</option>
+                            <option value="5">5 Stars</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="feedback_message">Message</label>
+                        <textarea name="message" class="form-control" id="feedback_message" rows="4" placeholder="Write your feedback here..." required minlength="20"></textarea>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>

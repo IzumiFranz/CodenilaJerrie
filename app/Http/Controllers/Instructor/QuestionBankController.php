@@ -78,7 +78,7 @@ class QuestionBankController extends Controller
             'type' => ['required', 'in:multiple_choice,true_false,identification,essay'],
             'points' => ['required', 'integer', 'min:1', 'max:100'],
             'difficulty' => ['required', 'in:easy,medium,hard'],
-            'blooms_level' => ['nullable', 'in:remember,understand,apply,analyze,evaluate,create'],
+            'bloom_level' => ['nullable', 'in:remember,understand,apply,analyze,evaluate,create'],
             'explanation' => ['nullable', 'string'],
             
             // For multiple choice
@@ -113,7 +113,7 @@ class QuestionBankController extends Controller
                 'type' => $validated['type'],
                 'points' => $validated['points'],
                 'difficulty' => $validated['difficulty'],
-                'blooms_level' => $validated['blooms_level'] ?? null,
+                'bloom_level' => $validated['bloom_level'] ?? null,
                 'explanation' => $validated['explanation'] ?? null,
             ]);
 
@@ -213,7 +213,7 @@ class QuestionBankController extends Controller
             'type' => ['required', 'in:multiple_choice,true_false,identification,essay'],
             'points' => ['required', 'integer', 'min:1', 'max:100'],
             'difficulty' => ['required', 'in:easy,medium,hard'],
-            'blooms_level' => ['nullable', 'in:remember,understand,apply,analyze,evaluate,create'],
+            'bloom_level' => ['nullable', 'in:remember,understand,apply,analyze,evaluate,create'],
             'explanation' => ['nullable', 'string'],
             
             'choices' => ['required_if:type,multiple_choice', 'array', 'min:2', 'max:6'],
@@ -246,7 +246,7 @@ class QuestionBankController extends Controller
                 'type' => $validated['type'],
                 'points' => $validated['points'],
                 'difficulty' => $validated['difficulty'],
-                'blooms_level' => $validated['blooms_level'] ?? null,
+                'bloom_level' => $validated['bloom_level'] ?? null,
                 'explanation' => $validated['explanation'] ?? null,
             ]);
 

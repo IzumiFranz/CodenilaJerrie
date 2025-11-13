@@ -44,7 +44,7 @@ return new class extends Migration
             $table->text('user_agent')->nullable();
 
             // Indexes
-            $table->index(['lesson_attachment_id', 'student_id']);
+            $table->index(['lesson_attachment_id', 'student_id'], 'lesson_attach_student_id');
             $table->index('downloaded_at');
         });
     }

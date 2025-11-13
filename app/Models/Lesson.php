@@ -131,6 +131,11 @@ class Lesson extends Model
         return $this->attachments()->where('is_visible', true);
     }
 
+    public function getVisibleAttachmentsAttribute()
+    {
+        return $this->attachments()->where('is_visible', true)->get();
+    }
+
     /**
      * Get attachment count.
      */

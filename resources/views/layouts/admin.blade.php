@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>@yield('title', 'Admin Dashboard') | {{ config('app.name', 'Quiz LMS') }}</title>
@@ -11,6 +11,7 @@
     <!-- Fonts & Icons -->
     <link href="{{ asset('vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Nunito:200,300,400,600,700,800,900" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
 
     <!-- SB Admin 2 CSS -->
     <link href="{{ asset('css/sb-admin-2.min.css') }}" rel="stylesheet">
@@ -18,83 +19,112 @@
     <!-- DataTables -->
     <link href="{{ asset('vendor/datatables/dataTables.bootstrap4.min.css') }}" rel="stylesheet">
 
-    <!-- Custom Admin Styles -->
-    <link href="{{ asset('css/admin-custom.css') }}" rel="stylesheet">
-
     @livewireStyles
 
     <style>
-        /* --- Layout Fixes --- */
+        /* Layout Structure - Fixed Sidebar with Scrolling */
         html, body {
             height: 100%;
             margin: 0;
-            overflow: hidden;
+        }
+
+        body {
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         #wrapper {
             display: flex;
-            height: 100%;
+            min-height: 100vh;
         }
 
         #accordionSidebar {
             position: fixed;
             top: 0;
             left: 0;
-            height: 100%;
+            width: 14rem;
+            height: 100vh;
             overflow-y: auto;
             z-index: 1030;
+            transition: all 0.3s ease;
         }
 
         #content-wrapper {
-            margin-left: 14rem; /* width of sidebar */
+            margin-left: 14rem;
             width: calc(100% - 14rem);
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
+            transition: all 0.3s ease;
         }
 
         #content {
-            flex: 1 1 auto;
-            overflow-y: auto;
-            padding-bottom: 1rem;
+            flex: 1 0 auto;
+            padding-bottom: 2rem;
+            width: 100%;
+        }
+        .container-fluid {
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
         }
 
         .topbar {
             position: sticky;
             top: 0;
-            z-index: 1040;
+            z-index: 1020;
         }
 
-        /* Sidebar colors */
+        .sticky-footer {
+            flex-shrink: 0;
+            margin-top: auto;
+        }
+
+        /* Smooth Scrollbars */
+        #content::-webkit-scrollbar,
+        #accordionSidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #content::-webkit-scrollbar-track,
+        #accordionSidebar::-webkit-scrollbar-track {
+            background: #f8f9fc;
+        }
+
+        #content::-webkit-scrollbar-thumb,
+        #accordionSidebar::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+
+        /* Admin Theme - Purple Gradient */
         .sidebar {
-            background: linear-gradient(180deg, #4e73df 10%, #224abe 100%);
+            background: linear-gradient(180deg, #667eea 10%, #764ba2 100%);
         }
 
         .sidebar .nav-item .nav-link {
             color: rgba(255, 255, 255, 0.8);
+            transition: all 0.3s;
         }
 
         .sidebar .nav-item .nav-link:hover {
             color: #fff;
+            background: rgba(255, 255, 255, 0.1);
         }
 
         .sidebar .nav-item.active .nav-link {
             color: #fff;
             font-weight: 700;
+            background: rgba(255, 255, 255, 0.15);
         }
 
-        /* Misc */
-        .empty-state {
-            text-align: center;
-            padding: 3rem 1rem;
-            color: #858796;
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
         }
 
-        .empty-state i {
-            font-size: 3rem;
-            opacity: 0.3;
-            margin-bottom: 1rem;
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5568d3 0%, #63397d 100%);
+            transform: translateY(-2px);
         }
 
         .icon-circle {
@@ -106,69 +136,24 @@
             justify-content: center;
         }
 
-        /* Loading overlay */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-        }
-
-        .loading-spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #4e73df;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-        }
-        
-        /* Smooth scrolling */
-        #content-wrapper, #accordionSidebar {
-            scroll-behavior: smooth;
-        }
-
-        /* Hide scrollbars but allow scrolling */
-        #content-wrapper::-webkit-scrollbar,
-        #accordionSidebar::-webkit-scrollbar {
-            width: 0;
-            height: 0;
-        }
-
-        #content-wrapper,
-        #accordionSidebar {
-            -ms-overflow-style: none;  /* IE/Edge */
-            scrollbar-width: thin;     /* Firefox */
-        }
-
-        /* Optional: hover to show a thin scrollbar */
-        #content-wrapper:hover::-webkit-scrollbar,
-        #accordionSidebar:hover::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        #content-wrapper::-webkit-scrollbar-thumb,
-        #accordionSidebar::-webkit-scrollbar-thumb {
-            background: rgba(0,0,0,0.2);
-            border-radius: 3px;
-        }
-
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .badge-counter {
+            position: absolute;
+            transform: scale(0.7);
+            transform-origin: top right;
+            right: 0.25rem;
+            margin-top: -0.25rem;
         }
 
         @media (max-width: 768px) {
+            #accordionSidebar {
+                margin-left: -14rem;
+            }
             #content-wrapper {
                 margin-left: 0;
                 width: 100%;
+            }
+            #accordionSidebar.toggled {
+                margin-left: 0;
             }
         }
     </style>
@@ -185,7 +170,7 @@
         <!-- Sidebar - Brand -->
         <a class="sidebar-brand d-flex align-items-center justify-content-center" href="{{ route('admin.dashboard') }}">
             <div class="sidebar-brand-icon rotate-n-15">
-                <i class="fas fa-graduation-cap"></i>
+                <i class="fas fa-user-shield"></i>
             </div>
             <div class="sidebar-brand-text mx-3">Admin Panel</div>
         </a>
@@ -304,6 +289,13 @@
             </a>
         </li>
 
+        <li class="nav-item {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">
+            <a class="nav-link" href="{{ route('admin.settings.index') }}">
+                <i class="fas fa-fw fa-cog"></i>
+                <span>Settings</span>
+            </a>
+        </li>
+
         <hr class="sidebar-divider d-none d-md-block">
 
         <div class="text-center d-none d-md-inline">
@@ -316,122 +308,42 @@
     <div id="content-wrapper" class="d-flex flex-column">
 
         <!-- Topbar -->
-        <nav class="navbar navbar-expand navbar-light bg-white topbar shadow">
+        <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
             <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
                 <i class="fa fa-bars"></i>
             </button>
 
             <ul class="navbar-nav ml-auto">
-                <!-- Alerts -->
+                <!-- Notifications -->
+                @php
+                    $unreadCount = Auth::check() && Auth::user()->notifications ? Auth::user()->notifications()->where('read_at', false)->count() : 0;
+                @endphp
+                
                 <li class="nav-item dropdown no-arrow mx-1">
                     <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" data-toggle="dropdown">
                         <i class="fas fa-bell fa-fw"></i>
                         @if($unreadCount > 0)
-                         <span class="badge badge-danger badge-counter">{{ $unreadCount > 9 ? '9+' : $unreadCount }}</span>
+                            <span class="badge badge-danger badge-counter">{{ $unreadCount > 9 ? '9+' : $unreadCount }}</span>
                         @endif
-
                     </a>
-                    <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in" aria-labelledby="alertsDropdown">
-                        <h6 class="dropdown-header">Alerts Center</h6>
-                        <a class="dropdown-item d-flex align-items-center" href="#">
-                            <div class="mr-3">
-                                <div class="icon-circle bg-primary">
-                                    <i class="fas fa-file-alt text-white"></i>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="small text-gray-500">{{ now()->format('F d, Y') }}</div>
-                                <span class="font-weight-bold">New user registered!</span>
-                            </div>
+                    <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in">
+                        <h6 class="dropdown-header">Notifications</h6>
+                        <a class="dropdown-item text-center small text-gray-500" href="{{ route('admin.notifications.index') }}">
+                            Show All Notifications
                         </a>
-                        <a class="dropdown-item text-center small text-gray-500" href="#">Show All Alerts</a>
                     </div>
                 </li>
-
-                <div class="topbar-divider d-none d-sm-block"></div>
-
-                <ul class="navbar-nav ml-auto">
-
-                        <!-- 🆕 Nav Item - Notifications -->
-                        @php
-                            $unreadCount = Auth::user()->notifications()->where('is_read', false)->count();
-                            $recentNotifications = Auth::user()->notifications()
-                                ->orderBy('created_at', 'desc')
-                                ->limit(5)
-                                ->get();
-                        @endphp
-                        
-                        <!-- Notifications Dropdown -->
-                        <li class="nav-item dropdown no-arrow mx-1">
-                            <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="fas fa-bell fa-fw"></i>
-                                @if($unreadCount > 0)
-                                    <span class="badge badge-danger badge-counter">{{ $unreadCount > 9 ? '9+' : $unreadCount }}</span>
-                                @endif
-                            </a>
-                            
-                            <!-- Dropdown - Notifications -->
-                            <div class="dropdown-list dropdown-menu dropdown-menu-right shadow animated--grow-in"
-                                aria-labelledby="alertsDropdown" style="max-width: 380px; min-width: 320px;">
-                                <h6 class="dropdown-header bg-info text-white">
-                                    <i class="fas fa-bell"></i> Notifications
-                                </h6>
-                                
-                                <div class="notification-list" style="max-height: 400px; overflow-y: auto;">
-                                    @forelse($recentNotifications as $notification)
-                                        <a class="dropdown-item d-flex align-items-center {{ !$notification->is_read ? 'bg-light' : '' }}" 
-                                        href="{{ route('student.notifications.mark-read', $notification) }}">
-                                            <div class="me-3">
-                                                @if($notification->type === 'info')
-                                                    <div class="icon-circle bg-info">
-                                                        <i class="fas fa-info-circle text-white"></i>
-                                                    </div>
-                                                @elseif($notification->type === 'success')
-                                                    <div class="icon-circle bg-success">
-                                                        <i class="fas fa-check-circle text-white"></i>
-                                                    </div>
-                                                @elseif($notification->type === 'warning')
-                                                    <div class="icon-circle bg-warning">
-                                                        <i class="fas fa-exclamation-triangle text-white"></i>
-                                                    </div>
-                                                @else
-                                                    <div class="icon-circle bg-danger">
-                                                        <i class="fas fa-exclamation-circle text-white"></i>
-                                                    </div>
-                                                @endif
-                                            </div>
-                                            <div>
-                                                <div class="small text-gray-500">{{ $notification->created_at->diffForHumans() }}</div>
-                                                <span class="font-weight-bold">{{ Str::limit($notification->title, 50) }}</span>
-                                                @if(!$notification->is_read)
-                                                    <span class="badge bg-info ms-1">New</span>
-                                                @endif
-                                            </div>
-                                        </a>
-                                    @empty
-                                        <div class="dropdown-item text-center py-3">
-                                            <i class="fas fa-bell-slash text-muted"></i>
-                                            <p class="mb-0 text-muted">No new notifications</p>
-                                        </div>
-                                    @endforelse
-                                </div>
-                                
-                                <a class="dropdown-item text-center small text-gray-500 bg-light" href="{{ route('student.notifications.index') }}">
-                                    <i class="fas fa-eye"></i> View All Notifications
-                                </a>
-                            </div>
-                        </li>
 
                 <div class="topbar-divider d-none d-sm-block"></div>
 
                 <!-- User Info -->
                 <li class="nav-item dropdown no-arrow">
                     <a class="nav-link dropdown-toggle" href="#" id="userDropdown" data-toggle="dropdown">
-                        <span class="mr-2 d-none d-lg-inline text-gray-600 small">{{ auth()->user()->full_name }}</span>
-                        @if(auth()->user()->profile_picture)
-                            <img class="img-profile rounded-circle" src="{{ asset('storage/' . auth()->user()->profile_picture) }}" alt="Profile">
+                        <span class="mr-2 d-none d-lg-inline text-gray-600 small">{{ Auth::user()->full_name ?? Auth::user()->username }}</span>
+                        @if(Auth::user()->profile_picture)
+                            <img class="img-profile rounded-circle" src="{{ asset('storage/' . Auth::user()->profile_picture) }}">
                         @else
-                            <img class="img-profile rounded-circle" src="{{ asset('img/undraw_profile.svg') }}" alt="Profile">
+                            <img class="img-profile rounded-circle" src="{{ asset('img/undraw_profile.svg') }}">
                         @endif
                     </a>
                     <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in">
@@ -440,6 +352,9 @@
                         </a>
                         <a class="dropdown-item" href="{{ route('profile.change-password') }}">
                             <i class="fas fa-key fa-sm fa-fw mr-2 text-gray-400"></i> Change Password
+                        </a>
+                        <a class="dropdown-item" href="{{ route('admin.settings.index') }}">
+                            <i class="fas fa-cog fa-sm fa-fw mr-2 text-gray-400"></i> Settings
                         </a>
                         <div class="dropdown-divider"></div>
                         <a class="dropdown-item" href="#" data-toggle="modal" data-target="#logoutModal">
@@ -451,13 +366,56 @@
         </nav>
 
         <!-- Page Content -->
-        <div id="content" class="p-4">
-            @include('partials.alerts')
-            @yield('content')
+        <div id="content">
+            <div class="container-fluid">
+                <!-- Flash Messages -->
+                @if(session('success'))
+                    <div class="alert alert-success alert-dismissible fade show">
+                        <i class="fas fa-check-circle mr-2"></i>{{ session('success') }}
+                        <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                    </div>
+                @endif
+
+                @if(session('error'))
+                    <div class="alert alert-danger alert-dismissible fade show">
+                        <i class="fas fa-exclamation-circle mr-2"></i>{{ session('error') }}
+                        <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                    </div>
+                @endif
+
+                @if(session('warning'))
+                    <div class="alert alert-warning alert-dismissible fade show">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>{{ session('warning') }}
+                        <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                    </div>
+                @endif
+
+                @if(session('info'))
+                    <div class="alert alert-info alert-dismissible fade show">
+                        <i class="fas fa-info-circle mr-2"></i>{{ session('info') }}
+                        <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                    </div>
+                @endif
+
+                @if($errors->any())
+                    <div class="alert alert-danger alert-dismissible fade show">
+                        <i class="fas fa-exclamation-circle mr-2"></i>
+                        <strong>Validation Errors:</strong>
+                        <ul class="mb-0 mt-2">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                        <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                    </div>
+                @endif
+
+                @yield('content')
+            </div>
         </div>
 
         <!-- Footer -->
-        <footer class="sticky-footer bg-white mt-auto">
+        <footer class="sticky-footer bg-white">
             <div class="container my-auto">
                 <div class="copyright text-center my-auto">
                     <span>Copyright &copy; Quiz LMS {{ date('Y') }}</span>
@@ -470,32 +428,96 @@
 <!-- Scroll to Top -->
 <a class="scroll-to-top rounded" href="#page-top"><i class="fas fa-angle-up"></i></a>
 
-@include('partials.modals')
+<!-- Logout Modal -->
+<div class="modal fade" id="logoutModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ready to Leave?</h5>
+                <button class="close" type="button" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">Select "Logout" to end your session.</div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit" class="btn btn-primary">Logout</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button class="close text-white" type="button" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">Are you sure you want to delete this item?</div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Scripts -->
 <script src="{{ asset('vendor/jquery/jquery.min.js') }}"></script>
 <script src="{{ asset('vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script src="{{ asset('vendor/jquery-easing/jquery.easing.min.js') }}"></script>
 <script src="{{ asset('js/sb-admin-2.min.js') }}"></script>
-<script src="{{ asset('vendor/datatables/jquery.dataTables.min.js') }}"></script>
-<script src="{{ asset('vendor/datatables/dataTables.bootstrap4.min.js') }}"></script>
-<script src="{{ asset('js/admin-custom.js') }}"></script>
+
 @livewireScripts
 
 <script>
-    // Auto-hide alerts after 5s
+    $.ajaxSetup({
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        }
+    });
+
     setTimeout(() => $('.alert').fadeOut('slow'), 5000);
 
-    // Delete confirmation handler
     let deleteForm = null;
     $('[data-confirm]').on('click', function(e) {
         e.preventDefault();
         deleteForm = $(this).closest('form');
         $('#deleteModal').modal('show');
     });
+
     $('#confirmDelete').on('click', function() {
         if (deleteForm) deleteForm.submit();
     });
+
+    // Cancel Schedule Function
+    function cancelSchedule(id, type) {
+        if (confirm('Are you sure you want to cancel the scheduled publish?')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = type === 'lesson' 
+                ? `/instructor/lessons/${id}/schedule`
+                : `/instructor/quizzes/${id}/schedule`;
+            
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = '{{ csrf_token() }}';
+            
+            const methodField = document.createElement('input');
+            methodField.type = 'hidden';
+            methodField.name = '_method';
+            methodField.value = 'DELETE';
+            
+            form.appendChild(csrfToken);
+            form.appendChild(methodField);
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
 </script>
 
 @stack('scripts')

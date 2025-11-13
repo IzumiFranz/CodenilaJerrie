@@ -75,7 +75,7 @@
                         <div class="col-4">
                             <i class="fas fa-calendar text-info fa-lg"></i>
                             <p class="mb-0 mt-2"><small class="text-muted">Published</small></p>
-                            <p class="mb-0"><strong>{{ $lesson->published_at->format('M d, Y') }}</strong></p>
+                            <p class="mb-0"><strong>{{ $lesson->published_at?->format('M d, Y') ?? 'Not published' }}</strong></p>
                         </div>
                     </div>
 
@@ -129,7 +129,7 @@
                             <div>
                                 <strong>{{ Str::limit($relatedLesson->title, 40) }}</strong>
                                 <small class="text-muted d-block">
-                                    <i class="fas fa-calendar mr-1"></i>{{ $relatedLesson->published_at->format('M d, Y') }}
+                                    <i class="fas fa-calendar mr-1"></i>{{ $relatedLesson->published_at?->format('M d, Y') ?? 'Not published' }}
                                 </small>
                             </div>
                             @if($relatedLesson->hasFile())

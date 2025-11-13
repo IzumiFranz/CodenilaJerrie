@@ -79,7 +79,7 @@ class User extends Authenticatable
         return $this->hasMany(QuizAttempt::class);
     }
 
-    public function aiJobs()
+    public function AIJobs()
     {
         return $this->hasMany(AIJob::class);
     }
@@ -124,6 +124,11 @@ class User extends Authenticatable
         return $this->username;
     }
 
+    /**
+     * Get the profile attribute (accessor)
+     * This returns the actual profile model instance
+     * Note: For eager loading, use with(['admin', 'instructor', 'student']) instead of with('profile')
+     */
     public function getProfileAttribute()
     {
         if ($this->isAdmin()) {

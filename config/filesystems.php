@@ -47,6 +47,34 @@ return [
             'report' => false,
         ],
 
+        'avatars' => [
+            'driver' => 'local',
+            'root' => storage_path('app/public/avatars'),
+            'url' => env('APP_URL').'/storage/avatars',
+            'visibility' => 'public',
+        ],
+
+        'lessons' => [
+            'driver' => 'local',
+            'root' => storage_path('app/public/lessons'),
+            'url' => env('APP_URL').'/storage/lessons',
+            'visibility' => 'public',
+        ],
+
+        'quizzes' => [
+            'driver' => 'local',
+            'root' => storage_path('app/public/quizzes'),
+            'url' => env('APP_URL').'/storage/quizzes',
+            'visibility' => 'public',
+        ],
+
+        'uploads' => [
+            'driver' => 'local',
+            'root' => storage_path('app/public/uploads'),
+            'url' => env('APP_URL').'/storage/uploads',
+            'visibility' => 'public',
+        ],
+        
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

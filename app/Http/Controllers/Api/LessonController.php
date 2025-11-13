@@ -13,7 +13,15 @@ class LessonController extends Controller
      */
     public function index(Request $request)
     {
-        $student = $request->user()->student;
+        $user = $request->user();
+        $student = $user->student;
+        
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Student profile not found'
+            ], 404);
+        }
         
         // Get enrolled section IDs
         $sectionIds = $student->enrollments()

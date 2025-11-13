@@ -21,6 +21,7 @@ return new class extends Migration
             $table->boolean('randomize_questions')->default(false);
             $table->boolean('randomize_choices')->default(false);
             $table->boolean('show_results')->default(true);
+            $table->enum('status', ['draft', 'published', 'scheduled'])->default('draft'); // NEW SYSTEM
             $table->boolean('show_answers')->default(false);
             $table->boolean('is_published')->default(false);
             $table->timestamp('available_from')->nullable();

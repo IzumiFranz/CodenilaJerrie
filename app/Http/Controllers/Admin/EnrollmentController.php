@@ -8,8 +8,10 @@ use App\Models\Student;
 use App\Models\Section;
 use App\Models\Course;
 use App\Models\AuditLog;
+use Illuminate\Support\Facades\Mail;
+use App\Models\Notification;
 use App\Mail\EnrollmentConfirmationMail;
-use Illuminate\Http\Request;
+use App\Mail\FeedbackResponseMail;use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class EnrollmentController extends Controller
@@ -98,35 +100,67 @@ class EnrollmentController extends Controller
 
             AuditLog::log('enrollment_created', $enrollment);
 
-            // 🔔 SEND ENROLLMENT CONFIRMATION EMAIL
-            $settings = $enrollment->student->user->settings ?? (object)[
+            $studentSettings = $enrollment->student->user->settings ?? (object)[
                 'email_enrollment' => true,
-                'notification_enrollment' => true
+                'notification_enrollment' => true,
             ];
-            
-            if ($settings->email_enrollment) {
-                Mail::to($enrollment->student->user->email)->queue(new EnrollmentConfirmationMail($enrollment));
+
+            if ($studentSettings->email_enrollment) {
+                Mail::to($enrollment->student->user->email)
+                    ->queue(new EnrollmentConfirmationMail($enrollment));
             }
-            
-            if ($settings->notification_enrollment) {
+
+            if ($studentSettings->notification_enrollment) {
                 Notification::create([
-                    'user_id' => $enrollment->student->user_id,
-                    'type' => 'success',
-                    'title' => 'Enrollment Confirmed',  
-                    'message' => "You have been enrolled in {$enrollment->section->full_name}.",
+                    'user_id'    => $enrollment->student->user_id,
+                    'type'       => 'success',
+                    'title'      => 'Enrollment Confirmed',
+                    'message'    => "You have been enrolled in {$enrollment->section->full_name}.",
                     'action_url' => route('student.dashboard'),
                 ]);
             }
 
+            // =====================================
+            // 👨‍🏫 Notify the INSTRUCTOR
+            // =====================================
+            $instructor = $enrollment->section->assignments()
+                ->where('subject_id', $enrollment->section->subject_id)
+                ->first()?->instructor;
+
+            if ($instructor) {
+                $instructorSettings = $instructor->user->settings ?? (object)[
+                    'email_student_enrolled' => true,
+                    'notification_student_enrolled' => true,
+                ];
+
+                if ($instructorSettings->email_student_enrolled) {
+                    Mail::to($instructor->user->email)
+                        ->queue(new StudentEnrolledMail($enrollment));
+                }
+
+                if ($instructorSettings->notification_student_enrolled) {
+                    Notification::create([
+                        'user_id'    => $instructor->user_id,
+                        'type'       => 'info',
+                        'title'      => 'New Student Enrolled',
+                        'message'    => "{$enrollment->student->full_name} enrolled in {$enrollment->section->full_name}",
+                        'action_url' => route('instructor.student-progress.show', $enrollment->student),
+                    ]);
+                }
+            }
+
+            // ✅ Final redirect (after everything runs)
             return redirect()
                 ->route('admin.enrollments.index')
                 ->with('success', 'Student enrolled successfully.');
+
         } catch (\Exception $e) {
             return back()
                 ->withInput()
                 ->with('error', 'Failed to enroll student: ' . $e->getMessage());
         }
     }
+
 
     public function show(Enrollment $enrollment)
     {
@@ -316,5 +350,11 @@ class EnrollmentController extends Controller
             $years[] = $year . '-' . ($year + 1);
         }
         return $years;
+    }
+
+    public function forceDelete($id)
+    {
+        Enrollment::withTrashed()->findOrFail($id)->forceDelete();
+        return back()->with('success', 'Enrollment permanently deleted.');
     }
 }

@@ -35,6 +35,15 @@ class SectionTable extends Component
         $this->resetPage();
     }
 
+    public function toggleStatus($sectionId)
+    {
+        $section = Section::findOrFail($sectionId);
+        $section->is_active = !$section->is_active;
+        $section->save();
+        
+        session()->flash('success', 'Section status updated successfully.');
+    }
+
     public function render()
     {
         $query = Section::with('course');

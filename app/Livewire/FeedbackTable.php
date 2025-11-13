@@ -37,9 +37,9 @@ class FeedbackTable extends Component
     public function markAsResolved($feedbackId)
     {
         $feedback = Feedback::findOrFail($feedbackId);
-        $feedback->update(['status' => 'resolved']);
+        $feedback->update(['status' => 'responded']);
         
-        session()->flash('success', 'Feedback marked as resolved.');
+        session()->flash('success', 'Feedback marked as responded.');
         $this->dispatch('feedback-updated');
     }
     
@@ -51,7 +51,8 @@ class FeedbackTable extends Component
             $query->whereHas('user', function($q) {
                 $q->where('username', 'like', "%{$this->search}%")
                   ->orWhere('email', 'like', "%{$this->search}%");
-            })->orWhere('comment', 'like', "%{$this->search}%");
+            })->orWhere('message', 'like', "%{$this->search}%")
+              ->orWhere('subject', 'like', "%{$this->search}%");
         }
         
         if ($this->status) {

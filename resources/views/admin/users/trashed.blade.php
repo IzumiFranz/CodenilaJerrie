@@ -38,9 +38,13 @@
                         <td>{{ $user->full_name }}</td>
                         <td>{{ $user->email }}</td>
                         <td>
-                            <span class="badge badge-{{ $user->role === 'admin' ? 'primary' : ($user->role === 'instructor' ? 'success' : 'info') }}">
-                                {{ ucfirst($user->role) }}
-                            </span>
+                            <@if($user->role === 'admin')
+                                            <span class="badge badge-primary">Admin</span>
+                                        @elseif($user->role === 'instructor')
+                                            <span class="badge badge-success">Instructor</span>
+                                        @else
+                                            <span class="badge badge-info">Student</span>
+                                        @endif
                         </td>
                         <td>{{ $user->deleted_at->format('M d, Y') }}</td>
                         <td>
@@ -51,13 +55,34 @@
                                         <i class="fas fa-undo"></i> Restore
                                     </button>
                                 </form>
-                                <form action="{{ route('admin.users.force-delete', $user->id) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-danger" data-confirm="Permanently delete this user? This cannot be undone!" title="Delete Forever">
-                                        <i class="fas fa-trash-alt"></i> Delete Forever
-                                    </button>
-                                </form>
+                                <button type="button" class="btn btn-sm btn-danger" data-toggle="modal" data-target="#forceDeleteModal{{ $user->id }}"title="Permanently Delete">
+                                            <i class="fas fa-trash-alt"></i>
+                                </button>
+                                {{-- Force Delete Modal --}}
+                                    <div class="modal fade" id="forceDeleteModal{{ $user->id }}" tabindex="-1" role="dialog">
+                                        <div class="modal-dialog" role="document">
+                                            <div class="modal-content">
+                                                <div class="modal-header bg-danger text-white">
+                                                    <h5 class="modal-title">Confirm Permanent Delete</h5>
+                                                    <button type="button" class="close text-white" data-dismiss="modal">
+                                                        <span>&times;</span>
+                                                        </button>
+                                                </div>
+                                                <div class="modal-body">
+                                                 <p>Are you sure you want to permanently delete <strong>{{ $user->full_name }}</strong>?</p>
+                                                 <p class="text-danger"><strong>Warning:</strong> This action CANNOT be undone! All related data will be permanently deleted.</p>
+                                                </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                                <form action="{{ route('admin.users.force-delete', $user->id) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-danger">Permanently Delete</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </td>
                     </tr>
@@ -67,14 +92,38 @@
         </div>
 
         <div class="mt-3">
-            {{ $users->links() }}
+                    {{ $users->links() }}
+                </div>
+            @else
+                <div class="text-center py-5">
+                    <i class="fas fa-trash-alt fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No deleted users found</p>
+                    <a href="{{ route('admin.users.index') }}" class="btn btn-primary">
+                        <i class="fas fa-arrow-left"></i> Back to Users
+                    </a>
+                </div>
+            @endif
         </div>
-        @else
-        <div class="empty-state">
-            <i class="fas fa-trash"></i>
-            <p class="mb-0">No deleted users found</p>
-        </div>
-        @endif
     </div>
-</div>
 @endsection
+@push('scripts')
+<script>
+    function restoreUser(userId) {
+        if (confirm('Are you sure you want to restore this user?')) {
+            // Create form and submit
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/admin/users/${userId}/restore`;
+            
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = '{{ csrf_token() }}';
+            
+            form.appendChild(csrfToken);
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+</script>
+@endpush

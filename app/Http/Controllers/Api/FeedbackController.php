@@ -13,10 +13,17 @@ class FeedbackController extends Controller
      */
     public function index(Request $request)
     {
-        $student = $request->user()->student;
+        $user = $request->user();
+        
+        if (!$user->student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User is not a student',
+            ], 403);
+        }
 
-        $feedbacks = Feedback::where('student_id', $student->id)
-            ->with('instructor')
+        $feedbacks = Feedback::where('user_id', $user->id)
+            ->with(['user', 'feedbackable'])
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
@@ -31,25 +38,41 @@ class FeedbackController extends Controller
      */
     public function store(Request $request)
     {
-        $student = $request->user()->student;
+        $user = $request->user();
+        
+        if (!$user->student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User is not a student',
+            ], 403);
+        }
 
         $validated = $request->validate([
-            'instructor_id' => 'required|exists:instructors,id',
+            'type' => 'required|in:quiz,lesson,instructor,general',
+            'subject' => 'required|string|max:255',
             'message' => 'required|string|max:2000',
             'rating' => 'nullable|integer|min:1|max:5',
+            'feedbackable_type' => 'nullable|string',
+            'feedbackable_id' => 'nullable|integer',
+            'is_anonymous' => 'boolean',
         ]);
 
         $feedback = Feedback::create([
-            'student_id' => $student->id,
-            'instructor_id' => $validated['instructor_id'],
+            'user_id' => $user->id,
+            'type' => $validated['type'],
+            'subject' => $validated['subject'],
             'message' => $validated['message'],
             'rating' => $validated['rating'] ?? null,
+            'feedbackable_type' => $validated['feedbackable_type'] ?? null,
+            'feedbackable_id' => $validated['feedbackable_id'] ?? null,
+            'is_anonymous' => $validated['is_anonymous'] ?? false,
+            'status' => 'pending',
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Feedback submitted successfully',
-            'data' => $feedback->load('instructor'),
+            'data' => $feedback->load(['user', 'feedbackable']),
         ]);
     }
 
@@ -58,9 +81,9 @@ class FeedbackController extends Controller
      */
     public function show(Request $request, Feedback $feedback)
     {
-        $student = $request->user()->student;
+        $user = $request->user();
 
-        if ($feedback->student_id !== $student->id) {
+        if ($feedback->user_id !== $user->id) {
             return response()->json([
                 'success' => false,
                 'message' => 'You do not have permission to view this feedback',
@@ -69,7 +92,7 @@ class FeedbackController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $feedback->load('instructor'),
+            'data' => $feedback->load(['user', 'feedbackable']),
         ]);
     }
 }

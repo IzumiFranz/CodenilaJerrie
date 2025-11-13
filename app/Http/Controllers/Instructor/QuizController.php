@@ -18,7 +18,12 @@ class QuizController extends Controller
 {
     public function index(Request $request)
     {
-        $instructor = auth()->user()->instructor;
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor) {
+            abort(403, 'User is not an instructor.');
+        }
         
         $query = Quiz::where('instructor_id', $instructor->id)
             ->with('subject')
@@ -235,28 +240,6 @@ class QuizController extends Controller
             AuditLog::log('quiz_publish_toggled', $quiz);
             
             SendQuizPublishedNotifications::dispatch($quiz, $students);
-
-            // 🔔 SEND EMAIL TO ENROLLED STUDENTS
-            foreach ($students as $student) {
-                $settings = $student->user->settings ?? (object)[
-                    'email_quiz_published' => true,
-                    'notification_quiz_published' => true
-                ];
-                
-                if ($settings->email_quiz_published) {
-                    Mail::to($student->user->email)->queue(new QuizPublishedMail($quiz));
-                }
-                
-                if ($settings->notification_quiz_published) {
-                    Notification::create([
-                        'user_id' => $student->user_id,
-                        'type' => 'info',
-                        'title' => 'New Quiz Available',
-                        'message' => "Quiz: {$quiz->title}",
-                        'action_url' => route('student.quizzes.show', $quiz),
-                    ]);
-                }
-            }
             
             $status = $quiz->is_published ? 'published' : 'unpublished';
             return back()->with('success', "Quiz {$status} successfully.");

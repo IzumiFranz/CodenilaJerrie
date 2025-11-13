@@ -194,4 +194,12 @@
         </div>
     </div>
 </div>
+@push('scripts')
+<script>
+    function toggleStatus(userId) {
+        if (confirm('Are you sure you want to toggle this user\'s status?')) {
+            window.location.href = `/admin/users/${userId}/toggle-status`;
+        }
+    }
+</script>
 @endsection

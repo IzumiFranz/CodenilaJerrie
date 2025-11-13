@@ -9,7 +9,7 @@ class Feedback extends Model
 {
     use HasFactory;
 
-    protected $table = 'feedback';
+    protected $table = 'feedbacks';
 
     protected $fillable = [
         'user_id',
@@ -47,15 +47,17 @@ class Feedback extends Model
     // Helper Methods
     public function respond(string $response): void
     {
-        $this->admin_response = $response;
+        $this->response = $response;
         $this->responded_at = now();
-        $this->status = 'resolved';
+        $this->status = 'responded';
         $this->save();
     }
 
     public function markAsReviewed(): void
     {
-        $this->status = 'reviewed';
+        // Note: Migration only has 'pending' and 'responded' statuses
+        // This method is kept for backward compatibility but sets to 'responded'
+        $this->status = 'responded';
         $this->save();
     }
 
@@ -66,7 +68,7 @@ class Feedback extends Model
 
     public function isResolved(): bool
     {
-        return $this->status === 'resolved';
+        return $this->status === 'responded';
     }
 
     // Scopes
@@ -77,6 +79,6 @@ class Feedback extends Model
 
     public function scopeResolved($query)
     {
-        return $query->where('status', 'resolved');
+        return $query->where('status', 'responded');
     }
 }

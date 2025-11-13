@@ -16,7 +16,12 @@ class ProgressController extends Controller
      */
     public function index(Request $request)
     {
-        $student = $request->user()->student;
+        $user = $request->user();
+        $student = $user->student;
+        
+        if (!$student) {
+            abort(403, 'User is not a student.');
+        }
         
         // Get current academic year and semester
         $currentAcademicYear = now()->format('Y') . '-' . (now()->year + 1);
@@ -121,14 +126,14 @@ class ProgressController extends Controller
             ->join('question_bank', 'quiz_answers.question_id', '=', 'question_bank.id')
             ->where('quiz_attempts.student_id', $student->id)
             ->where('quiz_attempts.status', 'completed')
-            ->whereNotNull('question_bank.blooms_level')
+            ->whereNotNull('question_bank.bloom_level')
             ->select(
-                'question_bank.blooms_level',
+                'question_bank.bloom_level',
                 DB::raw('COUNT(*) as total'),
                 DB::raw('SUM(CASE WHEN quiz_answers.is_correct THEN 1 ELSE 0 END) as correct'),
                 DB::raw('ROUND(AVG(CASE WHEN quiz_answers.is_correct THEN 100 ELSE 0 END), 2) as percentage')
             )
-            ->groupBy('question_bank.blooms_level')
+            ->groupBy('question_bank.bloom_level')
             ->get();
         
         return view('student.progress.index', compact(

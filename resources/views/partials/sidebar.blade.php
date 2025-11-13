@@ -1,20 +1,31 @@
 <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
 
-    <!-- Sidebar - Brand -->
-    <a class="sidebar-brand d-flex align-items-center justify-content-center" href="{{ route(auth()->user()->role . '.dashboard') }}">
+    <!-- Sidebar Brand -->
+    <a class="sidebar-brand d-flex align-items-center justify-content-center flex-column" 
+       href="{{ route(auth()->user()->role . '.dashboard') }}">
         <div class="sidebar-brand-icon">
-            <i class="fas fa-graduation-cap"></i>
+            @if(auth()->user()->isAdmin())
+                <i class="fas fa-user-shield"></i>
+            @elseif(auth()->user()->isInstructor())
+                <i class="fas fa-chalkboard-teacher"></i>
+            @else
+                <i class="fas fa-graduation-cap"></i>
+            @endif
         </div>
-        <div class="sidebar-brand-text mx-3">
-            Quiz LMS 
-            <sup>{{ ucfirst(auth()->user()->role) }}</sup>
+        <div class="sidebar-brand-text">
+            @if(auth()->user()->isAdmin())
+                Admin Panel
+            @elseif(auth()->user()->isInstructor())
+                Instructor
+            @else
+                Quiz LMS
+            @endif
         </div>
     </a>
 
-    <!-- Divider -->
     <hr class="sidebar-divider my-0">
 
-    <!-- Nav Item - Dashboard -->
+    <!-- Dashboard -->
     <li class="nav-item {{ request()->routeIs(auth()->user()->role . '.dashboard') ? 'active' : '' }}">
         <a class="nav-link" href="{{ route(auth()->user()->role . '.dashboard') }}">
             <i class="fas fa-fw fa-tachometer-alt"></i>
@@ -22,29 +33,30 @@
         </a>
     </li>
 
-    <!-- Divider -->
     <hr class="sidebar-divider">
 
     @if(auth()->user()->isAdmin())
-        <!-- ADMIN SIDEBAR -->
+        <!-- ====================================================================
+             ADMIN SIDEBAR - System Management
+             ==================================================================== -->
         <div class="sidebar-heading">User Management</div>
 
         <li class="nav-item {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
-            <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseUsers">
+            <a class="nav-link" href="{{ route('admin.users.index') }}">
                 <i class="fas fa-fw fa-users"></i>
                 <span>Users</span>
             </a>
-            <div id="collapseUsers" class="collapse {{ request()->routeIs('admin.users.*') ? 'show' : '' }}">
-                <div class="bg-white py-2 collapse-inner rounded">
-                    <a class="collapse-item" href="{{ route('admin.users.index') }}">All Users</a>
-                    <a class="collapse-item" href="{{ route('admin.users.create') }}">Add User</a>
-                    <a class="collapse-item" href="{{ route('admin.users.trashed') }}">Trash</a>
-                </div>
-            </div>
         </li>
 
         <hr class="sidebar-divider">
         <div class="sidebar-heading">Academic Setup</div>
+
+        <li class="nav-item {{ request()->routeIs('admin.specializations.*') ? 'active' : '' }}">
+            <a class="nav-link" href="{{ route('admin.specializations.index') }}">
+                <i class="fas fa-fw fa-certificate"></i>
+                <span>Specializations</span>
+            </a>
+        </li>
 
         <li class="nav-item {{ request()->routeIs('admin.courses.*') ? 'active' : '' }}">
             <a class="nav-link" href="{{ route('admin.courses.index') }}">
@@ -62,24 +74,14 @@
 
         <li class="nav-item {{ request()->routeIs('admin.sections.*') ? 'active' : '' }}">
             <a class="nav-link" href="{{ route('admin.sections.index') }}">
-                <i class="fas fa-fw fa-users-class"></i>
+                <i class="fas fa-fw fa-chalkboard"></i>
                 <span>Sections</span>
             </a>
         </li>
 
-        <li class="nav-item {{ request()->routeIs('admin.specializations.*') ? 'active' : '' }}">
-            <a class="nav-link" href="{{ route('admin.specializations.index') }}">
-                <i class="fas fa-fw fa-certificate"></i>
-                <span>Specializations</span>
-            </a>
-        </li>
-
-        <hr class="sidebar-divider">
-        <div class="sidebar-heading">Enrollment</div>
-
         <li class="nav-item {{ request()->routeIs('admin.enrollments.*') ? 'active' : '' }}">
             <a class="nav-link" href="{{ route('admin.enrollments.index') }}">
-                <i class="fas fa-fw fa-user-plus"></i>
+                <i class="fas fa-fw fa-user-graduate"></i>
                 <span>Enrollments</span>
             </a>
         </li>
@@ -103,10 +105,13 @@
 
         <li class="nav-item {{ request()->routeIs('admin.quizzes.*') ? 'active' : '' }}">
             <a class="nav-link" href="{{ route('admin.quizzes.index') }}">
-                <i class="fas fa-fw fa-clipboard-list"></i>
+                <i class="fas fa-fw fa-clipboard-check"></i>
                 <span>Quizzes</span>
             </a>
         </li>
+
+        <hr class="sidebar-divider">
+        <div class="sidebar-heading">System</div>
 
         <li class="nav-item {{ request()->routeIs('admin.feedback.*') ? 'active' : '' }}">
             <a class="nav-link" href="{{ route('admin.feedback.index') }}">
@@ -114,9 +119,6 @@
                 <span>Feedback</span>
             </a>
         </li>
-
-        <hr class="sidebar-divider">
-        <div class="sidebar-heading">System</div>
 
         <li class="nav-item {{ request()->routeIs('admin.notifications.*') ? 'active' : '' }}">
             <a class="nav-link" href="{{ route('admin.notifications.index') }}">
@@ -132,13 +134,40 @@
             </a>
         </li>
 
+        <li class="nav-item {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">
+            <a class="nav-link" href="{{ route('admin.settings.index') }}">
+                <i class="fas fa-fw fa-cog"></i>
+                <span>Settings</span>
+            </a>
+        </li>
+
     @elseif(auth()->user()->isInstructor())
-        <!-- INSTRUCTOR SIDEBAR -->
-        <div class="sidebar-heading">Teaching</div>
+        <!-- ====================================================================
+             INSTRUCTOR SIDEBAR - Teaching & AI Tools
+             ==================================================================== -->
+        
+        <!-- AI Assistant - Featured -->
+        <li class="nav-item {{ request()->routeIs('instructor.ai.*') ? 'active' : '' }}">
+            <a class="nav-link" href="{{ route('instructor.ai.index') }}">
+                <i class="fas fa-fw fa-robot"></i>
+                <span>AI Assistant</span>
+                @php
+                    $pendingJobs = \App\Models\AIJob::where('user_id', auth()->id())
+                        ->whereIn('status', ['pending', 'processing'])
+                        ->count();
+                @endphp
+                @if($pendingJobs > 0)
+                    <span class="badge ai-badge badge-counter ml-1">{{ $pendingJobs }}</span>
+                @endif
+            </a>
+        </li>
+
+        <hr class="sidebar-divider">
+        <div class="sidebar-heading">Teaching Content</div>
 
         <li class="nav-item {{ request()->routeIs('instructor.lessons.*') ? 'active' : '' }}">
             <a class="nav-link" href="{{ route('instructor.lessons.index') }}">
-                <i class="fas fa-fw fa-file-alt"></i>
+                <i class="fas fa-fw fa-book"></i>
                 <span>My Lessons</span>
             </a>
         </li>
@@ -158,7 +187,7 @@
         </li>
 
         <hr class="sidebar-divider">
-        <div class="sidebar-heading">Students</div>
+        <div class="sidebar-heading">Students & Analytics</div>
 
         <li class="nav-item {{ request()->routeIs('instructor.student-progress.*') ? 'active' : '' }}">
             <a class="nav-link" href="{{ route('instructor.student-progress.index') }}">
@@ -167,8 +196,17 @@
             </a>
         </li>
 
-    @elseif(auth()->user()->isStudent())
-        <!-- STUDENT SIDEBAR -->
+        <li class="nav-item {{ request()->routeIs('instructor.settings.*') ? 'active' : '' }}">
+            <a class="nav-link" href="{{ route('instructor.settings.index') }}">
+                <i class="fas fa-fw fa-cog"></i>
+                <span>Settings</span>
+            </a>
+        </li>
+
+    @else
+        <!-- ====================================================================
+             STUDENT SIDEBAR - Learning & Progress
+             ==================================================================== -->
         <div class="sidebar-heading">My Learning</div>
 
         <li class="nav-item {{ request()->routeIs('student.lessons.*') ? 'active' : '' }}">
@@ -178,17 +216,20 @@
             </a>
         </li>
 
-        <li class="nav-item {{ request()->routeIs('student.quizzes.*') ? 'active' : '' }}">
+        <li class="nav-item {{ request()->routeIs('student.quizzes.*', 'student.quiz-attempts.*') ? 'active' : '' }}">
             <a class="nav-link" href="{{ route('student.quizzes.index') }}">
                 <i class="fas fa-fw fa-pen"></i>
                 <span>Quizzes</span>
             </a>
         </li>
 
-        <li class="nav-item {{ request()->routeIs('student.quiz-attempts.*') ? 'active' : '' }}">
-            <a class="nav-link" href="{{ route('student.quiz-attempts.index') }}">
-                <i class="fas fa-fw fa-history"></i>
-                <span>My Attempts</span>
+        <hr class="sidebar-divider">
+        <div class="sidebar-heading">Performance</div>
+
+        <li class="nav-item {{ request()->routeIs('student.progress.*') ? 'active' : '' }}">
+            <a class="nav-link" href="{{ route('student.progress.index') }}">
+                <i class="fas fa-fw fa-chart-line"></i>
+                <span>My Progress</span>
             </a>
         </li>
 
@@ -196,14 +237,33 @@
         <div class="sidebar-heading">Support</div>
 
         <li class="nav-item {{ request()->routeIs('student.feedback.*') ? 'active' : '' }}">
-            <a class="nav-link" href="{{ route('student.feedback.create') }}">
+            <a class="nav-link" href="{{ route('student.feedback.index') }}">
                 <i class="fas fa-fw fa-comment-dots"></i>
-                <span>Send Feedback</span>
+                <span>Feedback</span>
+            </a>
+        </li>
+
+        <li class="nav-item {{ request()->routeIs('student.notifications.*') ? 'active' : '' }}">
+            <a class="nav-link" href="{{ route('student.notifications.index') }}">
+                <i class="fas fa-fw fa-bell"></i>
+                <span>Notifications</span>
+                @php
+                    $unreadCount = auth()->user()->notifications()->where('is_read', false)->count();
+                @endphp
+                @if($unreadCount > 0)
+                    <span class="badge badge-danger badge-counter ml-1">{{ $unreadCount }}</span>
+                @endif
+            </a>
+        </li>
+
+        <li class="nav-item {{ request()->routeIs('student.settings.*') ? 'active' : '' }}">
+            <a class="nav-link" href="{{ route('student.settings.index') }}">
+                <i class="fas fa-fw fa-cog"></i>
+                <span>Settings</span>
             </a>
         </li>
     @endif
 
-    <!-- Divider -->
     <hr class="sidebar-divider d-none d-md-block">
 
     <!-- Sidebar Toggler -->

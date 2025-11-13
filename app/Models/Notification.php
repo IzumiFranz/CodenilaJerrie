@@ -24,7 +24,6 @@ class Notification extends Model
             'read_at' => 'datetime',
         ];
     }
-
     // Relationships
     public function user()
     {
@@ -71,5 +70,9 @@ class Notification extends Model
     public function scopeRecent($query, int $days = 7)
     {
         return $query->where('created_at', '>=', now()->subDays($days));
+    }
+    public function getIsReadAttribute()
+    {
+        return !is_null($this->read_at);
     }
 }

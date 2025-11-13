@@ -161,14 +161,14 @@
                 <div class="col-md-4">
                     <div class="form-group">
                         <label>Bloom's Level</label>
-                        <select name="blooms_level" class="form-control">
+                        <select name="bloom_level" class="form-control">
                             <option value="">Select Level</option>
-                            <option value="remember" {{ old('blooms_level', $questionBank->blooms_level ?? '') == 'remember' ? 'selected' : '' }}>Remember</option>
-                            <option value="understand" {{ old('blooms_level', $questionBank->blooms_level ?? '') == 'understand' ? 'selected' : '' }}>Understand</option>
-                            <option value="apply" {{ old('blooms_level', $questionBank->blooms_level ?? '') == 'apply' ? 'selected' : '' }}>Apply</option>
-                            <option value="analyze" {{ old('blooms_level', $questionBank->blooms_level ?? '') == 'analyze' ? 'selected' : '' }}>Analyze</option>
-                            <option value="evaluate" {{ old('blooms_level', $questionBank->blooms_level ?? '') == 'evaluate' ? 'selected' : '' }}>Evaluate</option>
-                            <option value="create" {{ old('blooms_level', $questionBank->blooms_level ?? '') == 'create' ? 'selected' : '' }}>Create</option>
+                            <option value="remember" {{ old('bloom_level', $questionBank->bloom_level ?? '') == 'remember' ? 'selected' : '' }}>Remember</option>
+                            <option value="understand" {{ old('bloom_level', $questionBank->bloom_level ?? '') == 'understand' ? 'selected' : '' }}>Understand</option>
+                            <option value="apply" {{ old('bloom_level', $questionBank->bloom_level ?? '') == 'apply' ? 'selected' : '' }}>Apply</option>
+                            <option value="analyze" {{ old('bloom_level', $questionBank->bloom_level ?? '') == 'analyze' ? 'selected' : '' }}>Analyze</option>
+                            <option value="evaluate" {{ old('bloom_level', $questionBank->bloom_level ?? '') == 'evaluate' ? 'selected' : '' }}>Evaluate</option>
+                            <option value="create" {{ old('bloom_level', $questionBank->bloom_level ?? '') == 'create' ? 'selected' : '' }}>Create</option>
                         </select>
                     </div>
                 </div>

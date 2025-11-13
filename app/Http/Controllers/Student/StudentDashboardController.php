@@ -17,6 +17,10 @@ class StudentDashboardController extends Controller
     {
         $user = auth()->user();
         $student = $user->student;
+        
+        if (!$student) {
+            abort(403, 'User is not a student.');
+        }
 
         // Current Academic Year and Semester
         $currentAcademicYear = now()->format('Y') . '-' . (now()->year + 1);

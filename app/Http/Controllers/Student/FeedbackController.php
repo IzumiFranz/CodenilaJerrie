@@ -6,19 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Models\Feedback;
 use App\Models\Quiz;
 use App\Models\Lesson;
+use App\Models\User;
+use App\Models\Notification;
 use App\Models\AuditLog;
+use App\Mail\FeedbackSubmittedMail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 class FeedbackController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
-        
-        $feedback = Feedback::where('user_id', $user->id)
-            ->with('feedbackable')
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+        $query = Feedback::where('user_id', $user->id)->with('feedbackable');
 
         // Optional filters
         if ($request->filled('type')) {
@@ -42,8 +42,8 @@ class FeedbackController extends Controller
         $averageRating = Feedback::where('user_id', $user->id)->whereNotNull('rating')->avg('rating') ?? 0;
 
         // Dropdown data for the submit form (inline tab)
-        $quizzes = Quiz::where('status', 'published')->get();
-        $lessons = Lesson::where('status', 'published')->get();
+        $quizzes = Quiz::where('is_published', true)->get();
+        $lessons = Lesson::where('is_published', true)->get();
         $instructors = User::where('role', 'instructor')->get();
 
         // Open "Submit Feedback" tab if validation failed previously
@@ -92,8 +92,8 @@ class FeedbackController extends Controller
             'is_anonymous' => ['nullable', 'boolean'],
         ]);
     
-        try {
-            $feedback = Feedback::create([
+        try{
+                $feedback = Feedback::create([
                 'user_id' => auth()->id(),
                 'feedbackable_type' => match($validated['type'] ?? 'general') {
                     'quiz' => Quiz::class,
@@ -110,10 +110,37 @@ class FeedbackController extends Controller
             ]);
     
             AuditLog::log('feedback_submitted', $feedback);
-    
-            return redirect()->route('student.feedback.index')
-                ->with('success', 'Thank you for your feedback!');
-    
+            // Notify instructor if feedback is for a lesson or quiz
+            $instructor = null;
+            if ($feedback->feedbackable_type === Lesson::class) {
+                $instructor = $feedback->feedbackable->instructor;
+            } elseif ($feedback->feedbackable_type === Quiz::class) {
+                $instructor = $feedback->feedbackable->instructor;
+            }
+
+            if ($instructor) {
+                $settings = $instructor->user->settings ?? (object)[
+                    'email_feedback_submitted' => true,
+                    'notification_feedback_submitted' => true
+                ];
+
+                if ($settings->email_feedback_submitted) {
+                    Mail::to($instructor->user->email)->queue(new FeedbackSubmittedMail($feedback));
+                }
+
+                if ($settings->notification_feedback_submitted) {
+                    Notification::create([
+                        'user_id' => $instructor->user_id,
+                        'type' => 'info',
+                        'title' => 'New Feedback',
+                        'message' => 'A student submitted feedback',
+                        'action_url' => route('admin.feedback.show', $feedback),
+                    ]);
+                }
+            }
+                return redirect()->route('student.feedback.index')
+                    ->with('success', 'Thank you for your feedback!');
+
         } catch (\Exception $e) {
             return back()->withInput()
                 ->with('error', 'Failed to submit feedback: ' . $e->getMessage());

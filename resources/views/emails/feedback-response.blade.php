@@ -21,15 +21,17 @@ Lesson: {{ $feedback->feedbackable->title }}
 **Rating:** {{ str_repeat('⭐', $feedback->rating) }}
 @endif
 
-**Your Comment:**
-{{ $feedback->comment }}
+**Subject:** {{ $feedback->subject }}
+
+**Your Message:**
+{{ $feedback->message }}
 
 ---
 
 ## Administrator Response
 
 @component('mail::panel')
-{{ $feedback->admin_response }}
+{{ $feedback->response }}
 @endcomponent
 
 **Responded:** {{ $feedback->responded_at->format('F d, Y h:i A') }}

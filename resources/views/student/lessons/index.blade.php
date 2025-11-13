@@ -66,7 +66,7 @@
                     <i class="fas fa-user mr-1"></i><strong>Instructor:</strong> {{ $lesson->instructor->full_name }}
                 </p>
                 <p class="text-muted mb-2">
-                    <i class="fas fa-calendar mr-1"></i><strong>Published:</strong> {{ $lesson->published_at->format('M d, Y') }}
+                    <i class="fas fa-calendar mr-1"></i><strong>Published:</strong> {{ $lesson->published_at?->format('M d, Y') ?? 'Not published' }}
                 </p>
                 <p class="text-muted mb-3">
                     <i class="fas fa-eye mr-1"></i><strong>Views:</strong> {{ $lesson->view_count }}

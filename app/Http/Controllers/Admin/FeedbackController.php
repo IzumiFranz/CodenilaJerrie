@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Feedback;
 use App\Models\AuditLog;
 use App\Mail\FeedbackResponseMail;
+use Illuminate\Support\Facades\Mail;
+use App\Models\Notification;
+use App\Mail\EnrollmentConfirmationMail;
 use Illuminate\Http\Request;
 
 class FeedbackController extends Controller
@@ -19,7 +22,8 @@ class FeedbackController extends Controller
             $query->whereHas('user', function($q) use ($search) {
                 $q->where('username', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%");
-            })->orWhere('comment', 'like', "%{$search}%");
+            })->orWhere('message', 'like', "%{$search}%")
+              ->orWhere('subject', 'like', "%{$search}%");
         }
 
         if ($request->filled('status')) {
@@ -44,11 +48,11 @@ class FeedbackController extends Controller
     public function respond(Request $request, Feedback $feedback)
     {
         $validated = $request->validate([
-            'admin_response' => ['required', 'string', 'max:1000'],
+            'response' => ['required', 'string', 'max:1000'],
         ]);
 
         try {
-            $feedback->respond($validated['admin_response']);
+            $feedback->respond($validated['response']);
 
             AuditLog::log('feedback_responded', $feedback);
 
@@ -81,7 +85,7 @@ class FeedbackController extends Controller
     public function updateStatus(Request $request, Feedback $feedback)
     {
         $validated = $request->validate([
-            'status' => ['required', 'in:pending,reviewed,resolved'],
+            'status' => ['required', 'in:pending,responded'],
         ]);
 
         try {

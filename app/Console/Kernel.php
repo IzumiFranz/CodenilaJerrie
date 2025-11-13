@@ -20,6 +20,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('alerts:generate-performance')
         ->dailyAt('08:00')
         ->withoutOverlapping();
+        $schedule->command('reports:weekly')->weekly()->mondays()->at('08:00');
     }
 
     /**

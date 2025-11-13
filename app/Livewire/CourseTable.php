@@ -50,6 +50,15 @@ class CourseTable extends Component
         $this->resetPage();
     }
 
+    public function toggleStatus($courseId)
+    {
+        $course = Course::findOrFail($courseId);
+        $course->is_active = !$course->is_active;
+        $course->save();
+        
+        session()->flash('success', 'Course status updated successfully.');
+    }
+
     public function render()
     {
         $query = Course::withCount(['subjects', 'sections', 'students']);

@@ -1,55 +1,122 @@
 <?php
 
-
 namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
 use App\Models\Lesson;
 use App\Models\Subject;
-use App\Models\InstructorSubjectSection;
-use App\Models\AuditLog;
+use App\Models\Student;
+use App\Models\LessonView;
 use App\Models\LessonAttachment;
-use App\Mail\LessonPublishedMail;
-use App\Jobs\SendLessonPublishedNotifications;
+use App\Models\InstructorSubjectSection;
+use App\Models\Notification;
+use App\Models\AuditLog;
 use App\Services\LessonAttachmentService;
+use App\Mail\LessonPublishedMail;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class LessonController extends Controller
 {
+    /**
+     * Display a listing of lessons.
+     */
     public function index(Request $request)
     {
-        $instructor = auth()->user()->instructor;
+        $user = auth()->user();
+        $instructor = $user->instructor;
         
+        if (!$instructor) {
+            abort(403, 'User is not an instructor.');
+        }
+        
+        // Base query with relationships
         $query = Lesson::where('instructor_id', $instructor->id)
-            ->with('subject');
+            ->with(['subject', 'attachments']);
 
+        // Search filter
         if ($request->filled('search')) {
-            $query->where('title', 'like', "%{$request->search}%");
+            $query->where(function($q) use ($request) {
+                $q->where('title', 'like', "%{$request->search}%")
+                  ->orWhere('description', 'like', "%{$request->search}%");
+            });
         }
 
+        // Subject filter
         if ($request->filled('subject_id')) {
             $query->where('subject_id', $request->subject_id);
         }
 
+        // Status filter
         if ($request->filled('status')) {
-            $query->where('is_published', $request->status === 'published');
+            switch ($request->status) {
+                case 'published':
+                    $query->where('status', 'published');
+                    break;
+                case 'draft':
+                    $query->where('status', 'draft');
+                    break;
+                case 'scheduled':
+                    $query->where('status', 'scheduled')
+                          ->whereNotNull('scheduled_publish_at');
+                    break;
+            }
         }
 
-        $lessons = $query->orderBy('order')->orderBy('created_at', 'desc')->paginate(20);
-        
+        // Sorting
+        $sort = $request->input('sort', 'newest');
+        switch ($sort) {
+            case 'oldest':
+                $query->oldest();
+                break;
+            case 'title':
+                $query->orderBy('title');
+                break;
+            case 'views':
+                $query->withCount('views')->orderBy('views_count', 'desc');
+                break;
+            default: // newest
+                $query->latest();
+                break;
+        }
+
+        $lessons = $query->paginate(20)->withQueryString();
+
         // Get subjects taught by this instructor
         $subjectIds = InstructorSubjectSection::where('instructor_id', $instructor->id)
             ->pluck('subject_id')
             ->unique();
         $subjects = Subject::whereIn('id', $subjectIds)->get();
 
-        return view('instructor.lessons.index', compact('lessons', 'subjects'));
+        // Statistics for dashboard cards
+        $totalLessons = Lesson::where('instructor_id', $instructor->id)->count();
+        $publishedLessons = Lesson::where('instructor_id', $instructor->id)
+            ->where('status', 'published')
+            ->count();
+        $scheduledLessons = Lesson::where('instructor_id', $instructor->id)
+            ->where('status', 'scheduled')
+            ->whereNotNull('scheduled_publish_at')
+            ->count();
+        $withAttachments = Lesson::where('instructor_id', $instructor->id)
+            ->has('attachments')
+            ->count();
+
+        return view('instructor.lessons.index', compact(
+            'lessons',
+            'subjects',
+            'totalLessons',
+            'publishedLessons',
+            'scheduledLessons',
+            'withAttachments'
+        ));
     }
 
+    /**
+     * Show the form for creating a new lesson.
+     */
     public function create(Request $request)
     {
         $instructor = auth()->user()->instructor;
@@ -60,22 +127,35 @@ class LessonController extends Controller
             ->unique();
         $subjects = Subject::whereIn('id', $subjectIds)->get();
 
+        if ($subjects->isEmpty()) {
+            return redirect()
+                ->route('instructor.dashboard')
+                ->with('error', 'You are not assigned to teach any subjects yet.');
+        }
+
         $selectedSubject = $request->get('subject');
 
         return view('instructor.lessons.create', compact('subjects', 'selectedSubject'));
     }
 
+    /**
+     * Store a newly created lesson.
+     */
     public function store(Request $request)
     {
         $instructor = auth()->user()->instructor;
 
         $validated = $request->validate([
-            'subject_id' => ['required', 'exists:subjects,id'],
-            'title' => ['required', 'string', 'max:255'],
-            'content' => ['required', 'string'],
-            'file' => ['nullable', 'file', 'mimes:pdf,doc,docx,ppt,pptx,txt,zip', 'max:10240'], // 10MB
-            'order' => ['nullable', 'integer', 'min:1'],
-            'is_published' => ['boolean'],
+            'subject_id' => 'required|exists:subjects,id',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string|max:500',
+            'content' => 'required|string',
+            'order' => 'nullable|integer|min:0',
+            'status' => 'required|in:draft,published',
+            'scheduled_publish_at' => 'nullable|date|after:now',
+            'scheduled_unpublish_at' => 'nullable|date|after:scheduled_publish_at',
+            'attachments' => 'nullable|array|max:10',
+            'attachments.*' => 'file|max:51200|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,jpg,jpeg,png,gif,webp,zip,rar,mp4,mp3',
         ]);
 
         try {
@@ -85,62 +165,111 @@ class LessonController extends Controller
                 ->exists();
 
             if (!$canTeach) {
-                return back()->withInput()
+                return back()
+                    ->withInput()
                     ->with('error', 'You are not assigned to teach this subject.');
             }
 
-            // Handle file upload
-            $filePath = null;
-            $fileName = null;
-            if ($request->hasFile('file')) {
-                $file = $request->file('file');
-                $fileName = time() . '_' . Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) 
-                    . '.' . $file->getClientOriginalExtension();
-                $filePath = $file->storeAs('lessons', $fileName, 'public');
-            }
+            DB::beginTransaction();
+
+            // Calculate word count and read time
+            $plainText = strip_tags($validated['content']);
+            $wordCount = str_word_count($plainText);
+            $readTimeMinutes = max(1, ceil($wordCount / 200)); // 200 words per minute
 
             // Get next order number if not provided
-            if (!isset($validated['order'])) {
+            if (!isset($validated['order']) || $validated['order'] === 0) {
                 $maxOrder = Lesson::where('subject_id', $validated['subject_id'])->max('order') ?? 0;
                 $validated['order'] = $maxOrder + 1;
             }
 
+            // Determine final status
+            $finalStatus = $validated['status'];
+            if ($request->filled('scheduled_publish_at')) {
+                $finalStatus = 'scheduled';
+            }
+
+            // Create lesson
             $lesson = Lesson::create([
                 'instructor_id' => $instructor->id,
                 'subject_id' => $validated['subject_id'],
                 'title' => $validated['title'],
+                'description' => $validated['description'],
                 'content' => $validated['content'],
-                'file_path' => $filePath,
-                'file_name' => $fileName,
                 'order' => $validated['order'],
-                'is_published' => $validated['is_published'] ?? false,
+                'status' => $finalStatus,
+                'word_count' => $wordCount,
+                'read_time_minutes' => $readTimeMinutes,
+                'scheduled_publish_at' => $validated['scheduled_publish_at'] ?? null,
+                'scheduled_unpublish_at' => $validated['scheduled_unpublish_at'] ?? null,
             ]);
 
-            AuditLog::log('lesson_created', $lesson);
+            // Handle file attachments
+            if ($request->hasFile('attachments')) {
+                $attachmentService = app(LessonAttachmentService::class);
+                $attachmentService->uploadMultiple(
+                    $lesson,
+                    $request->file('attachments'),
+                    auth()->id()
+                );
+            }
 
-            // TODO: Notify enrolled students if published
-            // if ($lesson->is_published) {
-            //     Mail::to($enrolledStudents)->send(new LessonPublishedMail($lesson));
-            // }
+            // Audit log
+            AuditLog::log('lesson_created', $lesson, [], [
+                'subject' => $lesson->subject->subject_name ?? $lesson->subject->name ?? null,
+                'status' => $lesson->is_published ? 'published' : 'draft',
+            ]);
+
+            // Send notifications if published immediately
+            if ($finalStatus === 'published') {
+                $this->notifyStudentsAboutLesson($lesson);
+            }
+
+            DB::commit();
 
             return redirect()
-                ->route('instructor.lessons.index')
-                ->with('success', 'Lesson created successfully.');
+                ->route('instructor.lessons.show', $lesson)
+                ->with('success', 'Lesson created successfully!');
+
         } catch (\Exception $e) {
+            DB::rollBack();
             return back()
                 ->withInput()
                 ->with('error', 'Failed to create lesson: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Display the specified lesson.
+     */
     public function show(Lesson $lesson)
     {
         $this->authorize('view', $lesson);
-        $lesson->load('subject.course');
         
-        return view('instructor.lessons.show', compact('lesson'));
+        $lesson->load([
+            'subject',
+            'attachments' => function($query) {
+                $query->where('is_visible', true)->orderBy('display_order');
+            }
+        ]);
+
+        // Get view statistics
+        $viewStats = [
+            'total_views' => LessonView::where('lesson_id', $lesson->id)->count(),
+            'unique_viewers' => LessonView::where('lesson_id', $lesson->id)
+                ->distinct('student_id')
+                ->count(),
+            'completed_count' => LessonView::where('lesson_id', $lesson->id)
+                ->where('completed', true)
+                ->count(),
+        ];
+
+        return view('instructor.lessons.show', compact('lesson', 'viewStats'));
     }
 
+    /**
+     * Show the form for editing the lesson.
+     */
     public function edit(Lesson $lesson)
     {
         $this->authorize('update', $lesson);
@@ -153,21 +282,29 @@ class LessonController extends Controller
             ->unique();
         $subjects = Subject::whereIn('id', $subjectIds)->get();
 
+        $lesson->load('attachments');
+
         return view('instructor.lessons.edit', compact('lesson', 'subjects'));
     }
 
+    /**
+     * Update the specified lesson.
+     */
     public function update(Request $request, Lesson $lesson)
     {
         $this->authorize('update', $lesson);
 
         $validated = $request->validate([
-            'subject_id' => ['required', 'exists:subjects,id'],
-            'title' => ['required', 'string', 'max:255'],
-            'content' => ['required', 'string'],
-            'file' => ['nullable', 'file', 'mimes:pdf,doc,docx,ppt,pptx,txt,zip', 'max:10240'],
-            'remove_file' => ['boolean'],
-            'order' => ['required', 'integer', 'min:1'],
-            'is_published' => ['boolean'],
+            'subject_id' => 'required|exists:subjects,id',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string|max:500',
+            'content' => 'required|string',
+            'order' => 'required|integer|min:1',
+            'status' => 'required|in:draft,published',
+            'scheduled_publish_at' => 'nullable|date|after:now',
+            'scheduled_unpublish_at' => 'nullable|date|after:scheduled_publish_at',
+            'attachments' => 'nullable|array|max:10',
+            'attachments.*' => 'file|max:51200|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,jpg,jpeg,png,gif,webp,zip,rar,mp4,mp3',
         ]);
 
         try {
@@ -179,223 +316,292 @@ class LessonController extends Controller
                 ->exists();
 
             if (!$canTeach) {
-                return back()->withInput()
+                return back()
+                    ->withInput()
                     ->with('error', 'You are not assigned to teach this subject.');
             }
 
+            DB::beginTransaction();
+
             $oldValues = $lesson->toArray();
+            $wasPublished = $lesson->status === 'published';
 
-            // Handle file removal
-            if ($request->has('remove_file') && $request->remove_file) {
-                $lesson->deleteFile();
-                $lesson->file_path = null;
-                $lesson->file_name = null;
+            // Calculate word count and read time
+            $plainText = strip_tags($validated['content']);
+            $wordCount = str_word_count($plainText);
+            $readTimeMinutes = max(1, ceil($wordCount / 200));
+
+            // Determine final status
+            $finalStatus = $validated['status'];
+            if ($request->filled('scheduled_publish_at')) {
+                $finalStatus = 'scheduled';
             }
 
-            // Handle new file upload
-            if ($request->hasFile('file')) {
-                // Delete old file
-                $lesson->deleteFile();
-                
-                $file = $request->file('file');
-                $fileName = time() . '_' . Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) 
-                    . '.' . $file->getClientOriginalExtension();
-                $filePath = $file->storeAs('lessons', $fileName, 'public');
-                
-                $lesson->file_path = $filePath;
-                $lesson->file_name = $fileName;
-            }
-
+            // Update lesson
             $lesson->update([
                 'subject_id' => $validated['subject_id'],
                 'title' => $validated['title'],
+                'description' => $validated['description'],
                 'content' => $validated['content'],
                 'order' => $validated['order'],
-                'is_published' => $validated['is_published'] ?? $lesson->is_published,
+                'status' => $finalStatus,
+                'word_count' => $wordCount,
+                'read_time_minutes' => $readTimeMinutes,
+                'scheduled_publish_at' => $validated['scheduled_publish_at'] ?? null,
+                'scheduled_unpublish_at' => $validated['scheduled_unpublish_at'] ?? null,
             ]);
 
+            // Handle new attachments
+            if ($request->hasFile('attachments')) {
+                $attachmentService = app(LessonAttachmentService::class);
+                $attachmentService->uploadMultiple(
+                    $lesson,
+                    $request->file('attachments'),
+                    auth()->id()
+                );
+            }
+
+            // Audit log
             AuditLog::log('lesson_updated', $lesson, $oldValues, $lesson->toArray());
 
+            // Send notifications if newly published
+            if (!$wasPublished && $finalStatus === 'published') {
+                $this->notifyStudentsAboutLesson($lesson);
+            }
+
+            DB::commit();
+
             return redirect()
-                ->route('instructor.lessons.index')
-                ->with('success', 'Lesson updated successfully.');
+                ->route('instructor.lessons.show', $lesson)
+                ->with('success', 'Lesson updated successfully!');
+
         } catch (\Exception $e) {
+            DB::rollBack();
             return back()
                 ->withInput()
                 ->with('error', 'Failed to update lesson: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Remove the specified lesson.
+     */
     public function destroy(Lesson $lesson)
     {
         $this->authorize('delete', $lesson);
 
         try {
-            AuditLog::log('lesson_deleted', $lesson);
+            DB::beginTransaction();
+
+            // Audit log before deletion
+            AuditLog::log('lesson_deleted', $lesson, ['title' => $lesson->title], []);
             
-            $lesson->deleteFile();
+            // Delete will cascade to attachments (handled by model event)
             $lesson->delete();
+
+            DB::commit();
 
             return redirect()
                 ->route('instructor.lessons.index')
                 ->with('success', 'Lesson deleted successfully.');
+
         } catch (\Exception $e) {
+            DB::rollBack();
             return back()->with('error', 'Failed to delete lesson: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Toggle lesson publish status.
+     */
     public function togglePublish(Lesson $lesson)
     {
-        $this->authorize('publish', $lesson);
+        $this->authorize('update', $lesson);
         
         try {
-            $wasPublished = $lesson->is_published;
-            $lesson->is_published = !$lesson->is_published;
-            $lesson->save();
+            DB::beginTransaction();
 
-            if ($lesson->is_published) {
-                // Get enrolled students
-                $students = $this->getEnrolledStudents($lesson);
-                
-                // Queue email notifications
-                SendLessonPublishedNotifications::dispatch($lesson, $students);
+            $wasPublished = $lesson->status === 'published';
+            $newStatus = $wasPublished ? 'draft' : 'published';
+            
+            $lesson->update(['status' => $newStatus]);
+
+            // Audit log
+            AuditLog::log('lesson_publish_toggled', $lesson, ['old_status' => $wasPublished ? 'published' : 'draft'], ['new_status' => $newStatus]);
+
+            // Send notifications if newly published
+            if (!$wasPublished && $newStatus === 'published') {
+                $this->notifyStudentsAboutLesson($lesson);
             }
 
-            AuditLog::log('lesson_publish_toggled', $lesson);
+            DB::commit();
             
-            // 🔔 SEND EMAIL TO ENROLLED STUDENTS
-            $settings = $student->user->settings ?? (object)[
-                'email_lesson_published' => true,
-                'notification_lesson_published' => true
-            ];
+            $message = $newStatus === 'published' 
+                ? 'Lesson published successfully!' 
+                : 'Lesson unpublished successfully.';
             
-            if ($settings->email_lesson_published) {
-                Mail::to($student->user->email)->queue(new LessonPublishedMail($lesson));
-            }
-            
-            if ($settings->notification_lesson_published) {
-                Notification::create([
-                    'user_id' => $student->user->id,
-                    'type' => 'info',
-                    'title' => 'New Lesson Published',
-                    'message' => "A new lesson titled '{$lesson->title}' has been published in your course '{$lesson->course->title}'.",
-                    'action_url' => route('student.courses.show', $lesson->course_id),
-                ]);
-            }
-            
-            $status = $lesson->is_published ? 'published' : 'unpublished';
-            return back()->with('success', "Lesson {$status} successfully.");
+            return back()->with('success', $message);
             
         } catch (\Exception $e) {
+            DB::rollBack();
             return back()->with('error', 'Failed to toggle publish status: ' . $e->getMessage());
         }
     }
 
-    private function getEnrolledStudents($lesson)
-    {
-        return \App\Models\Student::whereHas('enrollments', function($q) use ($lesson) {
-            $q->where('status', 'enrolled')
-              ->whereHas('section.subjects', function($subQ) use ($lesson) {
-                  $subQ->where('subjects.id', $lesson->subject_id);
-              });
-        })->with('user')->get();
-    }
-
-    private function notifyStudentsAboutLesson(Lesson $lesson)
-    {
-        // Get all students enrolled in sections where this subject is taught
-        $students = \App\Models\Student::whereHas('enrollments', function($q) use ($lesson) {
-            $q->whereHas('section.assignments', function($query) use ($lesson) {
-                $query->where('subject_id', $lesson->subject_id)
-                      ->where('instructor_id', $lesson->instructor_id);
-            })
-            ->where('status', 'enrolled');
-        })
-        ->with('user')
-        ->get();
-        
-        // Send email to each student
-        foreach ($students as $student) {
-            Mail::to($student->user->email)
-                ->queue(new LessonPublishedMail($lesson));
-                
-            // Create in-app notification
-            \App\Models\Notification::create([
-                'user_id' => $student->user_id,
-                'type' => 'info',
-                'title' => 'New Lesson Available',
-                'message' => "A new lesson '{$lesson->title}' has been published in {$lesson->subject->subject_name}.",
-                'action_url' => route('student.lessons.show', $lesson),
-            ]);
-        }
-    }
-
+    /**
+     * Duplicate a lesson.
+     */
     public function duplicate(Lesson $lesson)
     {
         $this->authorize('view', $lesson);
 
         try {
+            DB::beginTransaction();
+
+            // Replicate lesson
             $newLesson = $lesson->replicate();
             $newLesson->title = $lesson->title . ' (Copy)';
-            $newLesson->is_published = false;
+            $newLesson->status = 'draft';
+            $newLesson->scheduled_publish_at = null;
+            $newLesson->scheduled_unpublish_at = null;
             $newLesson->order = Lesson::where('subject_id', $lesson->subject_id)->max('order') + 1;
             $newLesson->save();
 
-            // Copy file if exists
-            if ($lesson->file_path) {
-                $oldPath = $lesson->file_path;
-                $extension = pathinfo($oldPath, PATHINFO_EXTENSION);
-                $newFileName = time() . '_' . Str::random(10) . '.' . $extension;
-                $newPath = 'lessons/' . $newFileName;
+            // Copy attachments
+            foreach ($lesson->attachments as $attachment) {
+                $oldPath = $attachment->file_path;
                 
-                Storage::disk('public')->copy($oldPath, $newPath);
-                
-                $newLesson->file_path = $newPath;
-                $newLesson->file_name = $newFileName;
-                $newLesson->save();
+                if (Storage::disk('public')->exists($oldPath)) {
+                    $extension = $attachment->file_extension;
+                    $newStoredFilename = Str::uuid() . '.' . $extension;
+                    $newPath = 'lesson-attachments/' . $newLesson->id . '/' . $newStoredFilename;
+                    
+                    Storage::disk('public')->copy($oldPath, $newPath);
+                    
+                    LessonAttachment::create([
+                        'lesson_id' => $newLesson->id,
+                        'original_filename' => $attachment->original_filename,
+                        'stored_filename' => $newStoredFilename,
+                        'file_path' => $newPath,
+                        'mime_type' => $attachment->mime_type,
+                        'file_size' => $attachment->file_size,
+                        'file_extension' => $attachment->file_extension,
+                        'description' => $attachment->description,
+                        'display_order' => $attachment->display_order,
+                        'uploaded_by' => auth()->id(),
+                    ]);
+                }
             }
 
-            AuditLog::log('lesson_duplicated', $newLesson);
+            // Audit log
+            AuditLog::log('lesson_duplicated', $newLesson, [], ['original_lesson_id' => $lesson->id]);
+
+            DB::commit();
 
             return redirect()
                 ->route('instructor.lessons.edit', $newLesson)
-                ->with('success', 'Lesson duplicated successfully.');
+                ->with('success', 'Lesson duplicated successfully!');
+
         } catch (\Exception $e) {
+            DB::rollBack();
             return back()->with('error', 'Failed to duplicate lesson: ' . $e->getMessage());
         }
     }
 
-    public function download(Lesson $lesson)
+    /**
+     * Schedule lesson publish/unpublish.
+     */
+    public function schedule(Request $request, Lesson $lesson)
     {
-        $this->authorize('download', $lesson);
-
-        if (!$lesson->file_path || !Storage::disk('public')->exists($lesson->file_path)) {
-            return back()->with('error', 'File not found.');
+        $this->authorize('update', $lesson);
+        
+        $validated = $request->validate([
+            'scheduled_publish_at' => 'nullable|date|after:now',
+            'scheduled_unpublish_at' => 'nullable|date|after:scheduled_publish_at',
+        ]);
+        
+        try {
+            $lesson->update([
+                'scheduled_publish_at' => $validated['scheduled_publish_at'] ?? null,
+                'scheduled_unpublish_at' => $validated['scheduled_unpublish_at'] ?? null,
+                'status' => $validated['scheduled_publish_at'] ? 'scheduled' : $lesson->status,
+            ]);
+            
+            // Audit log
+            AuditLog::log('lesson_schedule_updated', $lesson, [], $validated);
+            
+            $message = 'Lesson scheduling updated successfully.';
+            if ($lesson->scheduled_publish_at) {
+                $message .= ' Will auto-publish on ' . $lesson->scheduled_publish_at->format('M d, Y h:i A');
+            }
+            
+            return back()->with('success', $message);
+            
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to update schedule: ' . $e->getMessage());
         }
-
-        AuditLog::log('lesson_file_downloaded', $lesson);
-
-        return Storage::disk('public')->download(
-            $lesson->file_path,
-            $lesson->file_name ?? basename($lesson->file_path)
-        );
     }
 
+    /**
+     * Cancel scheduled publish.
+     */
+    public function cancelSchedule(Lesson $lesson)
+    {
+        $this->authorize('update', $lesson);
+        
+        try {
+            $lesson->update([
+                'scheduled_publish_at' => null,
+                'scheduled_unpublish_at' => null,
+                'status' => 'draft',
+            ]);
+            
+            // Audit log
+            AuditLog::log('lesson_schedule_cancelled', $lesson, [], []);
+            
+            return back()->with('success', 'Schedule cancelled successfully.');
+            
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to cancel schedule: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Show view statistics.
+     */
     public function viewStatistics(Lesson $lesson)
     {
         $this->authorize('view', $lesson);
         
-        $stats = $lesson->getViewStats();
+        // Statistics
+        $stats = [
+            'total_views' => LessonView::where('lesson_id', $lesson->id)->count(),
+            'unique_viewers' => LessonView::where('lesson_id', $lesson->id)
+                ->distinct('student_id')
+                ->count(),
+            'completed_count' => LessonView::where('lesson_id', $lesson->id)
+                ->where('completed', true)
+                ->count(),
+            'average_duration' => LessonView::where('lesson_id', $lesson->id)
+                ->avg('duration_seconds'),
+            'completion_rate' => 0,
+        ];
+
+        // Calculate completion rate
+        if ($stats['unique_viewers'] > 0) {
+            $stats['completion_rate'] = round(($stats['completed_count'] / $stats['unique_viewers']) * 100, 2);
+        }
         
-        // Get view history
+        // View history
         $viewHistory = LessonView::where('lesson_id', $lesson->id)
             ->with('student.user')
             ->orderBy('viewed_at', 'desc')
             ->paginate(50);
         
-        // Get completion timeline
+        // Completion timeline for chart
         $completionTimeline = LessonView::where('lesson_id', $lesson->id)
             ->where('completed', true)
+            ->whereNotNull('completed_at')
             ->select(
                 DB::raw('DATE(completed_at) as date'),
                 DB::raw('COUNT(DISTINCT student_id) as count')
@@ -404,9 +610,8 @@ class LessonController extends Controller
             ->orderBy('date')
             ->get();
         
-        // Get students who haven't viewed yet
-        $instructor = auth()->user()->instructor;
-        $enrolledStudents = $this->getEnrolledStudents($lesson->subject_id);
+        // Students who haven't viewed yet
+        $enrolledStudents = $this->getEnrolledStudents($lesson);
         $viewedStudentIds = LessonView::where('lesson_id', $lesson->id)
             ->pluck('student_id')
             ->unique();
@@ -420,86 +625,6 @@ class LessonController extends Controller
             'completionTimeline',
             'notViewedStudents'
         ));
-    }
-
-    // Helper method
-    private function getEnrolledStudents(int $subjectId)
-    {
-        $instructor = auth()->user()->instructor;
-        $currentAcademicYear = now()->format('Y') . '-' . (now()->year + 1);
-        $currentSemester = $this->getCurrentSemester();
-        
-        $sectionIds = InstructorSubjectSection::where('instructor_id', $instructor->id)
-            ->where('subject_id', $subjectId)
-            ->where('academic_year', $currentAcademicYear)
-            ->where('semester', $currentSemester)
-            ->pluck('section_id');
-        
-        return Student::whereHas('enrollments', function($q) use ($sectionIds, $currentAcademicYear, $currentSemester) {
-            $q->whereIn('section_id', $sectionIds)
-                ->where('academic_year', $currentAcademicYear)
-                ->where('semester', $currentSemester)
-                ->where('status', 'enrolled');
-        })
-        ->with('user')
-        ->get();
-    }
-
-    /**
-     * Schedule lesson publish/unpublish
-     */
-    public function schedule(Request $request, Lesson $lesson)
-    {
-        $this->authorize('update', $lesson);
-        
-        $validated = $request->validate([
-            'scheduled_publish_at' => ['nullable', 'date', 'after:now'],
-            'scheduled_unpublish_at' => ['nullable', 'date', 'after:scheduled_publish_at'],
-            'auto_publish' => ['boolean'],
-        ]);
-        
-        try {
-            $lesson->update([
-                'scheduled_publish_at' => $validated['scheduled_publish_at'] ?? null,
-                'scheduled_unpublish_at' => $validated['scheduled_unpublish_at'] ?? null,
-                'auto_publish' => $validated['auto_publish'] ?? false,
-            ]);
-            
-            AuditLog::log('lesson_scheduled', $lesson);
-            
-            $message = 'Lesson scheduling updated successfully.';
-            if ($lesson->auto_publish && $lesson->scheduled_publish_at) {
-                $message .= ' Will auto-publish on ' . $lesson->scheduled_publish_at->format('M d, Y h:i A');
-            }
-            
-            return back()->with('success', $message);
-            
-        } catch (\Exception $e) {
-            return back()->with('error', 'Failed to update schedule: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Cancel scheduled publish
-     */
-    public function cancelSchedule(Lesson $lesson)
-    {
-        $this->authorize('update', $lesson);
-        
-        try {
-            $lesson->update([
-                'scheduled_publish_at' => null,
-                'scheduled_unpublish_at' => null,
-                'auto_publish' => false,
-            ]);
-            
-            AuditLog::log('lesson_schedule_cancelled', $lesson);
-            
-            return back()->with('success', 'Schedule cancelled successfully.');
-            
-        } catch (\Exception $e) {
-            return back()->with('error', 'Failed to cancel schedule: ' . $e->getMessage());
-        }
     }
 
     /**
@@ -525,7 +650,7 @@ class LessonController extends Controller
 
         $request->validate([
             'files' => 'required|array|max:10',
-            'files.*' => 'required|file|max:51200', // 50MB
+            'files.*' => 'required|file|max:51200',
             'descriptions' => 'nullable|array',
             'descriptions.*' => 'nullable|string|max:500',
         ]);
@@ -544,14 +669,10 @@ class LessonController extends Controller
             );
 
             // Audit log
-            activity()
-                ->performedOn($lesson)
-                ->causedBy(auth()->user())
-                ->withProperties([
-                    'count' => count($attachments),
-                    'filenames' => collect($attachments)->pluck('original_filename')->toArray(),
-                ])
-                ->log('Uploaded ' . count($attachments) . ' attachment(s) to lesson');
+            AuditLog::log('lesson_attachments_uploaded', $lesson, [], [
+                'count' => count($attachments),
+                'filenames' => collect($attachments)->pluck('original_filename')->toArray(),
+            ]);
 
             DB::commit();
 
@@ -582,11 +703,7 @@ class LessonController extends Controller
             app(LessonAttachmentService::class)->delete($attachment);
 
             // Audit log
-            activity()
-                ->performedOn($lesson)
-                ->causedBy(auth()->user())
-                ->withProperties(['filename' => $filename])
-                ->log('Deleted attachment from lesson');
+            AuditLog::log('lesson_attachment_deleted', $lesson, [], ['filename' => $filename]);
 
             return redirect()
                 ->route('instructor.lessons.attachments', $lesson)
@@ -613,14 +730,10 @@ class LessonController extends Controller
             $attachment = $service->toggleVisibility($attachment);
 
             // Audit log
-            activity()
-                ->performedOn($lesson)
-                ->causedBy(auth()->user())
-                ->withProperties([
-                    'filename' => $attachment->original_filename,
-                    'visible' => $attachment->is_visible,
-                ])
-                ->log('Toggled attachment visibility');
+            AuditLog::log('lesson_attachment_visibility_toggled', $lesson, [], [
+                'filename' => $attachment->original_filename,
+                'visible' => $attachment->is_visible,
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -678,10 +791,7 @@ class LessonController extends Controller
             $service->reorder($lesson, $request->input('order'));
 
             // Audit log
-            activity()
-                ->performedOn($lesson)
-                ->causedBy(auth()->user())
-                ->log('Reordered lesson attachments');
+            AuditLog::log('lesson_attachments_reordered', $lesson, [], []);
 
             return response()->json(['success' => true]);
 
@@ -691,7 +801,33 @@ class LessonController extends Controller
     }
 
     /**
-     * Download attachment (instructor).
+     * Download lesson file.
+     */
+    public function download(Lesson $lesson)
+    {
+        $this->authorize('view', $lesson);
+
+        if (!$lesson->hasFile()) {
+            return back()->with('error', 'No lesson file available for download.');
+        }
+
+        try {
+            $filePath = storage_path('app/' . $lesson->file_path);
+
+            if (!file_exists($filePath)) {
+                return back()->with('error', 'Lesson file not found.');
+            }
+
+            $fileName = basename($lesson->file_path);
+
+            return response()->download($filePath, $fileName);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Download failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Download attachment.
      */
     public function downloadAttachment(Lesson $lesson, LessonAttachment $attachment)
     {
@@ -701,6 +837,85 @@ class LessonController extends Controller
             abort(404);
         }
 
-        return Storage::download($attachment->file_path, $attachment->original_filename);
+        return Storage::disk('public')->download($attachment->file_path, $attachment->original_filename);
+    }
+
+    /**
+     * Notify enrolled students about new/published lesson.
+     */
+    private function notifyStudentsAboutLesson(Lesson $lesson)
+    {
+        try {
+            $students = $this->getEnrolledStudents($lesson);
+            
+            foreach ($students as $student) {
+                // Check notification preferences
+                $settings = $student->user->settings ?? null;
+                $emailEnabled = $settings->email_lesson_published ?? true;
+                $notificationEnabled = $settings->notification_lesson_published ?? true;
+
+                // Send email
+                if ($emailEnabled) {
+                    Mail::to($student->user->email)->queue(new LessonPublishedMail($lesson));
+                }
+
+                // Create in-app notification
+                if ($notificationEnabled) {
+                    Notification::create([
+                        'user_id' => $student->user_id,
+                        'type' => 'info',
+                        'title' => 'New Lesson Published',
+                        'message' => "A new lesson '{$lesson->title}' has been published in {$lesson->subject->subject_name}.",
+                        'action_url' => route('student.lessons.show', $lesson),
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            // Log error but don't fail the main operation
+            \Log::error('Failed to notify students about lesson: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get students enrolled in this lesson's subject.
+     */
+    private function getEnrolledStudents(Lesson $lesson)
+    {
+        $instructor = auth()->user()->instructor;
+        $currentAcademicYear = now()->format('Y') . '-' . (now()->year + 1);
+        $currentSemester = $this->getCurrentSemester();
+
+        // Find sections where instructor teaches this subject
+        $sectionIds = InstructorSubjectSection::where('instructor_id', $instructor->id)
+            ->where('subject_id', $lesson->subject_id)
+            ->where('academic_year', $currentAcademicYear)
+            ->where('semester', $currentSemester)
+            ->pluck('section_id');
+
+        // Get enrolled students
+        return Student::whereHas('enrollments', function($q) use ($sectionIds, $currentAcademicYear, $currentSemester) {
+            $q->whereIn('section_id', $sectionIds)
+              ->where('academic_year', $currentAcademicYear)
+              ->where('semester', $currentSemester)
+              ->where('status', 'enrolled');
+        })
+        ->with('user')
+        ->get();
+    }
+
+    /**
+     * Get current semester based on month.
+     */
+    private function getCurrentSemester(): string
+    {
+        $month = now()->month;
+        
+        if ($month >= 8 && $month <= 12) {
+            return '1st'; // First semester: August to December
+        } elseif ($month >= 1 && $month <= 5) {
+            return '2nd'; // Second semester: January to May
+        } else {
+            return 'Summer'; // Summer: June to July
+        }
     }
 }

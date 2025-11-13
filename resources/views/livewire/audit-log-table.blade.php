@@ -6,27 +6,31 @@
         </div>
         <div class="card-body">
             <div class="row">
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <input type="text" 
                         wire:model.live.debounce.300ms="search" 
                         class="form-control" 
-                        placeholder="Search feedback by user or comment...">
+                        placeholder="Search by action, model type, or username...">
                 </div>
                 <div class="col-md-3 mb-3">
-                    <select wire:model.live="status" class="form-control">
-                        <option value="">All Status</option>
-                        <option value="pending">Pending</option>
-                        <option value="reviewed">Reviewed</option>
-                        <option value="resolved">Resolved</option>
+                    <select wire:model.live="action" class="form-control">
+                        <option value="">All Actions</option>
+                        @foreach($actions as $actionItem)
+                            <option value="{{ $actionItem }}">{{ ucfirst(str_replace('_', ' ', $actionItem)) }}</option>
+                        @endforeach
                     </select>
                 </div>
                 <div class="col-md-2 mb-3">
-                    <select wire:model.live="rating" class="form-control">
-                        <option value="">All Ratings</option>
-                        @for($i = 5; $i >= 1; $i--)
-                            <option value="{{ $i }}">{{ $i }} Star{{ $i > 1 ? 's' : '' }}</option>
-                        @endfor
-                    </select>
+                    <input type="date" 
+                        wire:model.live="dateFrom" 
+                        class="form-control" 
+                        placeholder="From Date">
+                </div>
+                <div class="col-md-2 mb-3">
+                    <input type="date" 
+                        wire:model.live="dateTo" 
+                        class="form-control" 
+                        placeholder="To Date">
                 </div>
                 <div class="col-md-1 mb-3">
                     <button wire:click="$refresh" class="btn btn-secondary btn-block">
@@ -37,123 +41,129 @@
         </div>
     </div>
 
-    <!-- Feedback Cards -->
-    <div class="row">
-        @forelse($feedback as $item)
-            <div class="col-12 mb-4">
-                <div class="card shadow h-100">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center">
-                            @if($item->user->profile_picture)
-                                <img src="{{ asset('storage/' . $item->user->profile_picture) }}" 
-                                    class="rounded-circle mr-2" 
-                                    style="width: 40px; height: 40px; object-fit: cover;"
-                                    alt="Avatar">
-                            @else
-                                <div class="rounded-circle bg-primary text-white mr-2 d-flex align-items-center justify-content-center" 
-                                    style="width: 40px; height: 40px;">
-                                    {{ strtoupper(substr($item->user->username, 0, 1)) }}
-                                </div>
-                            @endif
-                            <div>
-                                <strong>{{ $item->user->username }}</strong>
-                                <br><small class="text-muted">{{ $item->created_at->diffForHumans() }}</small>
-                            </div>
-                        </div>
-                        <div>
-                            @if($item->status == 'pending')
-                                <span class="badge badge-warning">Pending</span>
-                            @elseif($item->status == 'reviewed')
-                                <span class="badge badge-info">Reviewed</span>
-                            @else
-                                <span class="badge badge-success">Resolved</span>
-                            @endif
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <!-- Rating -->
-                        @if($item->rating)
-                            <div class="mb-2">
-                                <div class="text-warning" style="font-size: 1.2rem;">
-                                    @for($i = 1; $i <= 5; $i++)
-                                        @if($i <= $item->rating)
-                                            ★
+    <!-- Audit Logs Table -->
+    <div class="card shadow">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Model</th>
+                            <th>Changes</th>
+                            <th>IP Address</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($logs as $log)
+                            <tr>
+                                <td>
+                                    <small>{{ $log->created_at->format('M d, Y') }}</small><br>
+                                    <small class="text-muted">{{ $log->created_at->format('h:i A') }}</small>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        @if($log->user->profile_picture)
+                                            <img src="{{ asset('storage/' . $log->user->profile_picture) }}" 
+                                                class="rounded-circle mr-2" 
+                                                style="width: 30px; height: 30px; object-fit: cover;"
+                                                alt="Avatar">
                                         @else
-                                            ☆
+                                            <div class="rounded-circle bg-primary text-white mr-2 d-flex align-items-center justify-content-center" 
+                                                style="width: 30px; height: 30px; font-size: 0.8rem;">
+                                                {{ strtoupper(substr($log->user->username, 0, 1)) }}
+                                            </div>
                                         @endif
-                                    @endfor
-                                </div>
-                            </div>
-                        @endif
-
-                        <!-- Related Item -->
-                        @if($item->feedbackable)
-                            <div class="mb-2">
-                                <small class="text-muted">
-                                    <i class="fas fa-link"></i> 
-                                    Related to: 
-                                    <span class="badge badge-info">{{ class_basename($item->feedbackable_type) }}</span>
-                                    @if($item->feedbackable_type == 'App\Models\Lesson')
-                                        {{ $item->feedbackable->title }}
-                                    @elseif($item->feedbackable_type == 'App\Models\Quiz')
-                                        {{ $item->feedbackable->title }}
+                                        <div>
+                                            <strong>{{ $log->user->username }}</strong><br>
+                                            <small class="text-muted">{{ $log->user->email }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge badge-{{ $log->action == 'deleted' ? 'danger' : ($log->action == 'created' ? 'success' : 'info') }}">
+                                        {{ ucfirst(str_replace('_', ' ', $log->action)) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    @if($log->model_type)
+                                        <span class="badge badge-secondary">
+                                            {{ class_basename($log->model_type) }}
+                                        </span>
+                                        @if($log->model_id)
+                                            <br><small class="text-muted">ID: {{ $log->model_id }}</small>
+                                        @endif
+                                    @else
+                                        <span class="text-muted">System</span>
                                     @endif
-                                </small>
-                            </div>
-                        @endif
-
-                        <!-- Comment -->
-                        <p class="mb-3">{{ $item->comment }}</p>
-
-                        <!-- Admin Response -->
-                        @if($item->admin_response)
-                            <div class="alert alert-info mb-0">
-                                <strong><i class="fas fa-reply"></i> Admin Response:</strong>
-                                <p class="mb-0 mt-2">{{ $item->admin_response }}</p>
-                                <small class="text-muted">
-                                    Responded {{ \Carbon\Carbon::parse($item->updated_at)->diffForHumans() }}
-                                </small>
-                            </div>
-                        @endif
-                    </div>
-                    <div class="card-footer bg-white border-top d-flex justify-content-between">
-                        <div>
-                            <small class="text-muted">
-                                <i class="fas fa-user"></i> {{ $item->user->email }}
-                            </small>
-                        </div>
-                        <div>
-                            <a href="{{ route('admin.feedback.show', $item) }}" class="btn btn-sm btn-info">
-                                <i class="fas fa-eye"></i> View Details
-                            </a>
-                            @if($item->status !== 'resolved')
-                                <button wire:click="markAsResolved({{ $item->id }})" 
-                                    wire:confirm="Mark this feedback as resolved?"
-                                    class="btn btn-sm btn-success">
-                                    <i class="fas fa-check"></i> Mark Resolved
-                                </button>
-                            @endif
-                        </div>
-                    </div>
-                </div>
+                                </td>
+                                <td>
+                                    @if($log->old_values || $log->new_values)
+                                        <button class="btn btn-sm btn-info" 
+                                            type="button" 
+                                            data-toggle="modal" 
+                                            data-target="#changesModal{{ $log->id }}">
+                                            <i class="fas fa-eye"></i> View
+                                        </button>
+                                        
+                                        <!-- Changes Modal -->
+                                        <div class="modal fade" id="changesModal{{ $log->id }}" tabindex="-1">
+                                            <div class="modal-dialog modal-lg">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Changes Details</h5>
+                                                        <button type="button" class="close" data-dismiss="modal">
+                                                            <span>&times;</span>
+                                                        </button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="row">
+                                                            @if($log->old_values)
+                                                            <div class="col-md-6">
+                                                                <h6>Old Values</h6>
+                                                                <pre class="bg-light p-3 rounded">{{ json_encode($log->old_values, JSON_PRETTY_PRINT) }}</pre>
+                                                            </div>
+                                                            @endif
+                                                            @if($log->new_values)
+                                                            <div class="col-md-6">
+                                                                <h6>New Values</h6>
+                                                                <pre class="bg-light p-3 rounded">{{ json_encode($log->new_values, JSON_PRETTY_PRINT) }}</pre>
+                                                            </div>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @else
+                                        <span class="text-muted">No changes</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <small>{{ $log->ip_address ?? 'N/A' }}</small>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="text-center py-5">
+                                    <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No Audit Logs Found</h5>
+                                    <p class="text-muted mb-0">There are no audit logs matching your filters.</p>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
-        @empty
-            <div class="col-12">
-                <div class="card shadow">
-                    <div class="card-body text-center py-5">
-                        <i class="fas fa-comments fa-4x text-muted mb-3"></i>
-                        <h5 class="text-muted">No Feedback Found</h5>
-                        <p class="text-muted mb-0">There are no feedback submissions matching your filters.</p>
-                    </div>
-                </div>
-            </div>
-        @endforelse
+        </div>
     </div>
 
     <!-- Pagination -->
-    @if($feedback->hasPages())
+    @if($logs->hasPages())
         <div class="d-flex justify-content-center mt-4">
-            {{ $feedback->links() }}
+            {{ $logs->links() }}
         </div>
     @endif
 
@@ -162,6 +172,6 @@
         <div class="spinner-border text-primary" role="status">
             <span class="sr-only">Loading...</span>
         </div>
-        <p class="text-muted mt-2">Loading feedback...</p>
+        <p class="text-muted mt-2">Loading audit logs...</p>
     </div>
 </div>

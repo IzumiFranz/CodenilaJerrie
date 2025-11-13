@@ -1,5 +1,7 @@
 @extends('layouts.admin')
+
 @section('title', 'Manage Courses')
+
 @section('content')
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-book mr-2"></i>Manage Courses</h1>
@@ -13,101 +15,46 @@
     </div>
 </div>
 
+<!-- Filters (optional: can also be handled by Livewire inside the table) -->
 <div class="card shadow mb-4">
     <div class="card-header py-3">
         <h6 class="m-0 font-weight-bold text-primary">Search & Filter</h6>
     </div>
     <div class="card-body">
-        <form method="GET">
-            <div class="row">
-                <div class="col-md-6">
-                    <input type="text" name="search" class="form-control" placeholder="Search courses..." value="{{ request('search') }}">
-                </div>
-                <div class="col-md-4">
-                    <select name="status" class="form-control">
-                        <option value="">All Status</option>
-                        <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active</option>
-                        <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactive</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary btn-block">
-                        <i class="fas fa-search"></i> Filter
-                    </button>
-                </div>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <input type="text" wire:model.debounce.300ms="search" class="form-control" placeholder="Search courses...">
             </div>
-        </form>
+            <div class="col-md-3 mb-3">
+                <select wire:model="status" class="form-control">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+            <div class="col-md-3 mb-3">
+                <select wire:model="perPage" class="form-control">
+                    <option value="10">10 per page</option>
+                    <option value="20">20 per page</option>
+                    <option value="50">50 per page</option>
+                </select>
+            </div>
+        </div>
     </div>
 </div>
 
+<!-- Livewire Courses Table -->
 <div class="card shadow mb-4">
-    <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Courses List</h6>
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-primary">
+            Courses List
+        </h6>
+        <div wire:loading class="spinner-border spinner-border-sm text-primary" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
     </div>
     <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Code</th>
-                        <th>Course Name</th>
-                        <th>Max Years</th>
-                        <th>Subjects</th>
-                        <th>Sections</th>
-                        <th>Students</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($courses as $course)
-                    <tr>
-                        <td><strong>{{ $course->course_code }}</strong></td>
-                        <td>{{ $course->course_name }}</td>
-                        <td>{{ $course->max_years }}</td>
-                        <td>{{ $course->subjects_count }}</td>
-                        <td>{{ $course->sections_count }}</td>
-                        <td>{{ $course->students_count }}</td>
-                        <td>
-                            <form action="{{ route('admin.courses.toggle-status', $course) }}" method="POST" class="d-inline">
-                                @csrf
-                                <span class="badge badge-{{ $course->is_active ? 'success' : 'secondary' }}">
-                                    {{ $course->is_active ? 'Active' : 'Inactive' }}
-                                </span>
-                            </form>
-                        </td>
-                        <td>
-                            <div class="btn-group btn-group-sm">
-                                <a href="{{ route('admin.courses.show', $course) }}" class="btn btn-info" title="View">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{{ route('admin.courses.edit', $course) }}" class="btn btn-warning" title="Edit">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <form action="{{ route('admin.courses.destroy', $course) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-danger" data-confirm="Delete this course?" title="Delete">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="8" class="text-center py-4">
-                            <div class="empty-state">
-                                <i class="fas fa-book"></i>
-                                <p class="mb-0">No courses found</p>
-                            </div>
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-        <div class="mt-3">{{ $courses->links() }}</div>
+        @livewire('course-table')
     </div>
 </div>
 @endsection

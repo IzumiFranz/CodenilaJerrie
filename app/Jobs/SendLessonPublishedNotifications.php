@@ -1,5 +1,12 @@
 <?php
-\Foundation\Bus\Dispatchable;
+
+namespace App\Jobs;
+
+use App\Mail\LessonPublishedMail;
+use App\Models\Lesson;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
@@ -24,7 +31,6 @@ class SendLessonPublishedNotifications implements ShouldQueue
                 Mail::to($student->user->email)
                     ->send(new LessonPublishedMail($this->lesson));
                     
-                // Create in-app notification
                 \App\Models\Notification::create([
                     'user_id' => $student->user_id,
                     'type' => 'info',

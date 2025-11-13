@@ -10,14 +10,22 @@ use App\Models\QuizAttempt;
 use App\Models\InstructorSubjectSection;
 use App\Models\Enrollment;
 use App\Services\PerformanceAlertService;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class StudentProgressController extends Controller
 {
     public function index(Request $request)
     {
-        $instructor = auth()->user()->instructor;
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor) {
+            abort(403, 'User is not an instructor.');
+        }
         
         // Get current academic year and semester
         $currentAcademicYear = now()->format('Y') . '-' . (now()->year + 1);
@@ -65,7 +73,12 @@ class StudentProgressController extends Controller
 
     public function show(Request $request, Student $student)
     {
-        $instructor = auth()->user()->instructor;
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor) {
+            abort(403, 'User is not an instructor.');
+        }
         
         // Get current academic year and semester
         $currentAcademicYear = $request->get('academic_year', now()->format('Y') . '-' . (now()->year + 1));
@@ -147,24 +160,24 @@ class StudentProgressController extends Controller
             ->where('quiz_attempts.student_id', $student->id)
             ->where('quiz_attempts.status', 'completed')
             ->select(
-                'question_bank.blooms_level',
+                'question_bank.bloom_level',
                 DB::raw('AVG(CASE WHEN quiz_answers.is_correct THEN 100 ELSE 0 END) as avg_score'),
                 DB::raw('COUNT(*) as total_questions')
             )
-            ->whereNotNull('question_bank.blooms_level')
-            ->groupBy('question_bank.blooms_level')
+            ->whereNotNull('question_bank.bloom_level')
+            ->groupBy('question_bank.bloom_level')
             ->get();
 
         foreach ($allAnswers as $level) {
             if ($level->avg_score >= 75) {
                 $strengths[] = [
-                    'level' => ucfirst($level->blooms_level),
+                    'level' => ucfirst($level->bloom_level),
                     'score' => round($level->avg_score, 2),
                     'total' => $level->total_questions
                 ];
             } elseif ($level->avg_score < 60) {
                 $weaknesses[] = [
-                    'level' => ucfirst($level->blooms_level),
+                    'level' => ucfirst($level->bloom_level),
                     'score' => round($level->avg_score, 2),
                     'total' => $level->total_questions
                 ];
@@ -329,7 +342,20 @@ class StudentProgressController extends Controller
 
     public function exportStudentPdf(Student $student)
     {
-        $this->authorize('viewProgress', $student);
+        $instructor = auth()->user()->instructor;
+        
+        if (!$instructor) {
+            abort(403, 'User is not an instructor.');
+        }
+        
+        // Verify instructor teaches this student
+        $currentAcademicYear = now()->format('Y') . '-' . (now()->year + 1);
+        $currentSemester = $this->getCurrentSemester();
+        $commonSections = $this->getCommonSections($instructor->id, $student->id, $currentAcademicYear, $currentSemester);
+        
+        if ($commonSections->isEmpty()) {
+            abort(403, 'You do not teach this student.');
+        }
         
         $quizAttempts = QuizAttempt::where('student_id', $student->id)
             ->with(['quiz.subject'])
@@ -369,5 +395,68 @@ class StudentProgressController extends Controller
         
         return response()->json(['success' => true]);
     }
+    public function checkPerformanceAlerts()
+    {
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor) {
+            return;
+        }
+        
+        $settings = $user->settings;
+        $emailAlert = $settings?->email_low_performance_alert ?? false;
+        $notificationAlert = $settings?->notification_low_performance_alert ?? false;
+        
+        if (!$emailAlert && !$notificationAlert) {
+            return; // Skip if disabled
+        }
+        
+        // Get sections with low average
+        $sections = Section::whereHas('assignments', function($q) use ($instructor) {
+            $q->where('instructor_id', $instructor->id);
+        })->get();
+        
+        foreach ($sections as $section) {
+            $average = $this->getSectionAverageScore($section);
+            
+            if ($average < 60) { // Threshold
+                if ($emailAlert) {
+                    // Note: LowPerformanceAlertMail doesn't exist, using generic notification
+                    Mail::to($user->email)->send(new \App\Mail\SystemErrorMail(
+                        "Low Performance Alert",
+                        "Section {$section->full_name} has an average score of {$average}%"
+                    ));
+                }
+                
+                if ($notificationAlert) {
+                    Notification::create([
+                        'user_id' => $user->id,
+                        'type' => 'warning',
+                        'title' => 'Low Class Performance',
+                        'message' => "{$section->full_name} average: {$average}%",
+                        'action_url' => route('instructor.student-progress.index'),
+                    ]);
+                }
+            }
+        }
+    }
     
+    private function getSectionAverageScore(Section $section): float
+    {
+        // Calculate average score for all quizzes in this section
+        $quizIds = Quiz::whereHas('subject', function($q) use ($section) {
+            $q->whereHas('assignments', function($q2) use ($section) {
+                $q2->where('section_id', $section->id);
+            });
+        })->pluck('id');
+        
+        if ($quizIds->isEmpty()) {
+            return 0;
+        }
+        
+        return QuizAttempt::whereIn('quiz_id', $quizIds)
+            ->where('status', 'completed')
+            ->avg('percentage') ?? 0;
+    }
 }

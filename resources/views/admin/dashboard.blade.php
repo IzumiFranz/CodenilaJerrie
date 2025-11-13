@@ -2,6 +2,67 @@
 
 @section('title', 'Admin Dashboard')
 
+@push('styles')
+<style>
+    /* Avatar styling */
+    .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+    
+    /* Quick actions responsive */
+    .quick-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    /* Ensure cards have consistent height */
+    .stat-card {
+        transition: transform 0.2s;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    /* Fix table responsiveness */
+    .table-responsive {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    /* User list item spacing */
+    .user-item {
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e3e6f0;
+    }
+    
+    .user-item:last-child {
+        border-bottom: none;
+    }
+    
+    /* Mobile responsive adjustments */
+    @media (max-width: 768px) {
+        .quick-actions {
+            width: 100%;
+            margin-top: 1rem;
+        }
+        
+        .quick-actions .btn {
+            flex: 1;
+            justify-content: center;
+        }
+        
+        .d-sm-flex {
+            display: block !important;
+        }
+    }
+</style>
+@endpush
+
 @section('content')
 <!-- Page Heading -->
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
@@ -20,7 +81,7 @@
 <div class="row">
     <!-- Total Users Card -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-primary shadow h-100 py-2">
+        <div class="card border-left-primary shadow h-100 py-2 stat-card">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
@@ -38,7 +99,7 @@
 
     <!-- Active Users Card -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-success shadow h-100 py-2">
+        <div class="card border-left-success shadow h-100 py-2 stat-card">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
@@ -56,7 +117,7 @@
 
     <!-- Instructors Card -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-info shadow h-100 py-2">
+        <div class="card border-left-info shadow h-100 py-2 stat-card">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
@@ -74,7 +135,7 @@
 
     <!-- Students Card -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-warning shadow h-100 py-2">
+        <div class="card border-left-warning shadow h-100 py-2 stat-card">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
@@ -95,7 +156,7 @@
 <div class="row">
     <!-- Courses Card -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-primary shadow h-100 py-2">
+        <div class="card border-left-primary shadow h-100 py-2 stat-card">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
@@ -114,7 +175,7 @@
 
     <!-- Subjects Card -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-success shadow h-100 py-2">
+        <div class="card border-left-success shadow h-100 py-2 stat-card">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
@@ -133,7 +194,7 @@
 
     <!-- Sections Card -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-info shadow h-100 py-2">
+        <div class="card border-left-info shadow h-100 py-2 stat-card">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
@@ -152,7 +213,7 @@
 
     <!-- Enrollments Card -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-warning shadow h-100 py-2">
+        <div class="card border-left-warning shadow h-100 py-2 stat-card">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
@@ -174,7 +235,7 @@
 <div class="row">
     <!-- Lessons Card -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-success shadow h-100 py-2">
+        <div class="card border-left-success shadow h-100 py-2 stat-card">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
@@ -193,7 +254,7 @@
 
     <!-- Quizzes Card -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-info shadow h-100 py-2">
+        <div class="card border-left-info shadow h-100 py-2 stat-card">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
@@ -212,7 +273,7 @@
 
     <!-- Quiz Attempts Card -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-primary shadow h-100 py-2">
+        <div class="card border-left-primary shadow h-100 py-2 stat-card">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
@@ -231,7 +292,7 @@
 
     <!-- Average Score Card -->
     <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-success shadow h-100 py-2">
+        <div class="card border-left-success shadow h-100 py-2 stat-card">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
@@ -248,19 +309,40 @@
     </div>
 </div>
 
+<!-- Content Row - Pending Feedback Alert -->
+@if($pendingFeedback > 0)
+<div class="row">
+    <div class="col-12">
+        <div class="alert alert-warning shadow mb-4" role="alert">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-exclamation-triangle fa-2x mr-3"></i>
+                <div class="flex-grow-1">
+                    You have <strong>{{ $pendingFeedback }}</strong> pending feedback to review.
+                </div>
+                <a href="{{ route('admin.feedback.index') }}" class="btn btn-warning btn-sm ml-3">
+                    View Feedback
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
 <!-- Content Row - Tables -->
 <div class="row">
     <!-- Recent Activities -->
-    <div class="col-xl-8 col-lg-7">
-        <div class="card shadow mb-4">
+    <div class="col-xl-8 col-lg-7 mb-4">
+        <div class="card shadow h-100">
             <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                 <h6 class="m-0 font-weight-bold text-primary">Recent Activities</h6>
-                <a href="{{ route('admin.audit-logs.index') }}" class="btn btn-sm btn-primary">View All</a>
+                <a href="{{ route('admin.audit-logs.index') }}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-list fa-sm mr-1"></i> View All
+                </a>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="thead-light">
                             <tr>
                                 <th>User</th>
                                 <th>Action</th>
@@ -271,16 +353,23 @@
                         <tbody>
                             @forelse($recentActivities as $log)
                             <tr>
-                                <td>{{ $log->user ? $log->user->username : 'System' }}</td>
+                                <td>
+                                    <div class="font-weight-bold">{{ $log->user ? $log->user->username : 'System' }}</div>
+                                </td>
                                 <td>
                                     <span class="badge badge-primary">{{ $log->action }}</span>
                                 </td>
                                 <td>{{ $log->model_type ? class_basename($log->model_type) : '-' }}</td>
-                                <td>{{ $log->created_at->diffForHumans() }}</td>
+                                <td>
+                                    <small class="text-muted">{{ $log->created_at->diffForHumans() }}</small>
+                                </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="4" class="text-center text-muted py-3">No recent activities</td>
+                                <td colspan="4" class="text-center text-muted py-4">
+                                    <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                    No recent activities
+                                </td>
                             </tr>
                             @endforelse
                         </tbody>
@@ -291,58 +380,52 @@
     </div>
 
     <!-- Recent Users -->
-    <div class="col-xl-4 col-lg-5">
-        <div class="card shadow mb-4">
+    <div class="col-xl-4 col-lg-5 mb-4">
+        <div class="card shadow h-100">
             <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                 <h6 class="m-0 font-weight-bold text-primary">Recent Users</h6>
-                <a href="{{ route('admin.users.index') }}" class="btn btn-sm btn-primary">View All</a>
+                <a href="{{ route('admin.users.index') }}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-users fa-sm mr-1"></i> View All
+                </a>
             </div>
             <div class="card-body">
                 @forelse($recentUsers as $user)
-                <div class="d-flex align-items-center mb-3">
+                <div class="d-flex align-items-center user-item">
                     @if($user->profile_picture)
-                        <img src="{{ asset('storage/' . $user->profile_picture) }}" class="avatar mr-3" alt="Avatar">
+                        <img src="{{ asset('storage/' . $user->profile_picture) }}" class="avatar mr-3" alt="{{ $user->full_name }}">
                     @else
-                        <img src="{{ asset('img/undraw_profile.svg') }}" class="avatar mr-3" alt="Avatar">
+                        <img src="{{ asset('img/undraw_profile.svg') }}" class="avatar mr-3" alt="Default Avatar">
                     @endif
-                    <div class="flex-grow-1">
-                        <div class="font-weight-bold">{{ $user->full_name }}</div>
-                        <div class="text-xs text-muted">{{ $user->email }}</div>
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="font-weight-bold text-truncate">{{ $user->full_name }}</div>
+                        <div class="text-xs text-muted text-truncate">{{ $user->email }}</div>
                     </div>
-                    <span class="badge badge-{{ $user->role === 'admin' ? 'primary' : ($user->role === 'instructor' ? 'success' : 'info') }}">
+                    <span class="badge badge-{{ $user->role === 'admin' ? 'primary' : ($user->role === 'instructor' ? 'success' : 'info') }} ml-2">
                         {{ ucfirst($user->role) }}
                     </span>
                 </div>
                 @empty
-                <p class="text-center text-muted">No recent users</p>
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-user-slash fa-2x mb-2 d-block"></i>
+                    No recent users
+                </div>
                 @endforelse
             </div>
         </div>
     </div>
 </div>
-
-<!-- Content Row - Pending Feedback -->
-@if($pendingFeedback > 0)
-<div class="row">
-    <div class="col-12">
-        <div class="alert alert-warning" role="alert">
-            <i class="fas fa-exclamation-triangle mr-2"></i>
-            You have <strong>{{ $pendingFeedback }}</strong> pending feedback to review.
-            <a href="{{ route('admin.feedback.index') }}" class="alert-link">View Feedback</a>
-        </div>
-    </div>
-</div>
-@endif
 @endsection
 
 @push('scripts')
 <script>
-    // Additional dashboard scripts if needed
     $(document).ready(function() {
-        // Refresh stats every 5 minutes
-        setInterval(function() {
-            // You can implement auto-refresh logic here
-        }, 300000);
+        // Optional: Add tooltip initialization
+        $('[data-toggle="tooltip"]').tooltip();
+        
+        // Optional: Auto-refresh stats every 5 minutes
+        // setInterval(function() {
+        //     location.reload();
+        // }, 300000);
     });
 </script>
 @endpush

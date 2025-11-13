@@ -186,17 +186,22 @@ class QuizAttemptController extends Controller
     {
         $student = auth()->user()->student;
 
+        // Ensure only the student who owns the attempt can submit it
         if (!$student || $attempt->student_id !== $student->id) {
             abort(403, 'Unauthorized access to quiz attempt.');
         }
 
+        // Prevent re-submitting an already completed quiz
         if ($attempt->isCompleted()) {
-            return redirect()->route('student.quiz-attempts.results', $attempt)->with('info', 'This quiz has already been submitted.');
+            return redirect()
+                ->route('student.quiz-attempts.results', $attempt)
+                ->with('info', 'This quiz has already been submitted.');
         }
 
         try {
             DB::beginTransaction();
 
+            // Auto-grade objective-type questions
             $answers = $attempt->answers()->with('question')->get();
             foreach ($answers as $answer) {
                 if ($answer->question->isMultipleChoice() || $answer->question->isTrueFalse()) {
@@ -204,48 +209,64 @@ class QuizAttemptController extends Controller
                 }
             }
 
-            $totalScore = $answers->sum('points_earned');
+            $totalScore  = $answers->sum('points_earned');
             $totalPoints = $answers->sum(fn($a) => $a->question->points ?? 0);
-            $percentage = $totalPoints > 0 ? round(($totalScore / $totalPoints) * 100, 2) : 0;
+            $percentage  = $totalPoints > 0 ? round(($totalScore / $totalPoints) * 100, 2) : 0;
 
+            // Update the attempt record
             $attempt->update([
-                'status' => 'completed',
-                'completed_at' => now(),
-                'score' => $totalScore,
-                'total_points' => $totalPoints,
-                'percentage' => $percentage,
+                'status'        => 'completed',
+                'completed_at'  => now(),
+                'score'         => $totalScore,
+                'total_points'  => $totalPoints,
+                'percentage'    => $percentage,
             ]);
 
             $attempt->complete();
             AuditLog::log('quiz_submitted', $attempt);
 
             DB::commit();
-            
-            // Send result email + notification
-            $settings = $attempt->student->user->settings ?? (object)[
-                'email_quiz_result' => true,
-                'notification_quiz_result' => true
+
+            $instructor = $attempt->quiz->instructor;
+            $settings = $instructor->user->settings ?? (object)[
+                'email_quiz_submitted' => true,
+                'notification_quiz_submitted' => true,
             ];
 
-            if ($settings->email_quiz_result) {
-                Mail::to($attempt->student->user->email)->queue(new QuizResultMail($attempt));
+            // ✅ Send email if enabled
+            if ($settings->email_quiz_submitted) {
+                Mail::to($instructor->user->email)
+                    ->queue(new QuizSubmittedMail($attempt));
             }
 
-            if ($settings->notification_quiz_result) {
+            // ✅ Create notifications if enabled
+            if ($settings->notification_quiz_submitted) {
                 Notification::create([
-                    'user_id' => $attempt->student->user_id,
-                    'type' => $attempt->isPassed() ? 'success' : 'warning',
-                    'title' => 'Quiz Result Available',
-                    'message' => "Your result for '{$attempt->quiz->title}': {$percentage}%",
+                    'user_id'    => $instructor->user_id,
+                    'type'       => 'success',
+                    'title'      => 'Quiz Submitted',
+                    'message'    => "{$attempt->student->full_name} submitted {$attempt->quiz->title}",
+                    'action_url' => route('instructor.quizzes.results', $attempt->quiz),
+                ]);
+
+                Notification::create([
+                    'user_id'    => $attempt->student->user_id,
+                    'type'       => $attempt->isPassed() ? 'success' : 'warning',
+                    'title'      => 'Quiz Result Available',
+                    'message'    => "Your result for '{$attempt->quiz->title}' is {$percentage}%",
                     'action_url' => route('student.quiz-attempts.results', $attempt),
                 ]);
             }
 
-            return redirect()->route('student.quiz-attempts.results', $attempt)->with('success', 'Quiz submitted successfully!');
+            return redirect()
+                ->route('student.quiz-attempts.results', $attempt)
+                ->with('success', 'Quiz submitted successfully.');
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
-            return back()->with('error', 'Failed to submit quiz: ' . $e->getMessage());
+            report($e);
+
+            return back()->with('error', 'Failed to submit quiz. Please try again.');
         }
     }
 

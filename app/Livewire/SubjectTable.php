@@ -67,6 +67,15 @@ class SubjectTable extends Component
         $this->resetPage();
     }
 
+    public function toggleStatus($subjectId)
+    {
+        $subject = Subject::findOrFail($subjectId);
+        $subject->is_active = !$subject->is_active;
+        $subject->save();
+        
+        session()->flash('success', 'Subject status updated successfully.');
+    }
+
     public function render()
     {
         $query = Subject::with(['course', 'specialization']);

@@ -190,7 +190,7 @@
                     </small>
                     <br>
                     <small class="text-muted">
-                        <i class="fas fa-clock mr-1"></i>Published {{ $lesson->published_at->diffForHumans() }}
+                        <i class="fas fa-clock mr-1"></i>Published {{ $lesson->published_at?->diffForHumans() ?? 'Not published' }}
                     </small>
                 </div>
                 @empty

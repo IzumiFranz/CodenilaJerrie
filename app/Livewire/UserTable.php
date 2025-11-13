@@ -64,7 +64,7 @@ class UserTable extends Component
 
     public function render()
     {
-        $query = User::with('profile');
+        $query = User::with(['admin', 'instructor', 'student']);
 
         // Search
         if ($this->search) {

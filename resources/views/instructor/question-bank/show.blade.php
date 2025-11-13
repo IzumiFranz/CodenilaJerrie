@@ -30,8 +30,8 @@
                             <span class="badge badge-{{ $questionBank->difficulty == 'easy' ? 'success' : ($questionBank->difficulty == 'medium' ? 'warning' : 'danger') }}">
                                 {{ ucfirst($questionBank->difficulty) }}
                             </span>
-                            @if($questionBank->blooms_level)
-                                <span class="badge badge-primary">{{ ucfirst($questionBank->blooms_level) }}</span>
+                            @if($questionBank->bloom_level)
+                                <span class="badge badge-primary">{{ ucfirst($questionBank->bloom_level) }}</span>
                             @endif
                         </div>
                         <span class="badge badge-dark badge-lg">{{ $questionBank->points }} points</span>
@@ -135,12 +135,12 @@
                         <th>Points:</th>
                         <td><strong>{{ $questionBank->points }}</strong></td>
                     </tr>
-                    @if($questionBank->blooms_level)
+                    @if($questionBank->bloom_level)
                     <tr>
                         <th>Bloom's Level:</th>
                         <td>
                             <span class="badge badge-primary">
-                                {{ ucfirst($questionBank->blooms_level) }}
+                                {{ ucfirst($questionBank->bloom_level) }}
                             </span>
                         </td>
                     </tr>

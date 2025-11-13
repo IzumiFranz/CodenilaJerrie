@@ -30,8 +30,13 @@ class NotificationController extends Controller
         }
 
         $notifications = $query->orderBy('created_at', 'desc')->paginate(20);
-
-        return view('admin.notifications.index', compact('notifications'));
+        $unreadCount = 0;
+        if (auth()->check()) {
+            $unreadCount = Notification::where('user_id', auth()->id())
+                ->whereNull('read_at')
+                ->count();
+        }
+        return view('admin.notifications.index', compact('notifications', 'unreadCount'));
     }
 
     public function create()

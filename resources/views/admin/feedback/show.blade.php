@@ -19,10 +19,8 @@
                 <h6 class="m-0 font-weight-bold text-primary">Feedback Information</h6>
                 @if($feedback->status == 'pending')
                     <span class="badge badge-warning">Pending</span>
-                @elseif($feedback->status == 'reviewed')
-                    <span class="badge badge-info">Reviewed</span>
                 @else
-                    <span class="badge badge-success">Resolved</span>
+                    <span class="badge badge-success">Responded</span>
                 @endif
             </div>
             <div class="card-body">
@@ -77,11 +75,22 @@
 
                 <div class="row mb-3">
                     <div class="col-md-3">
-                        <strong>Comment:</strong>
+                        <strong>Subject:</strong>
                     </div>
                     <div class="col-md-9">
                         <div class="border rounded p-3 bg-light">
-                            {{ $feedback->comment }}
+                            <strong>{{ $feedback->subject }}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <strong>Message:</strong>
+                    </div>
+                    <div class="col-md-9">
+                        <div class="border rounded p-3 bg-light">
+                            {{ $feedback->message }}
                         </div>
                     </div>
                 </div>
@@ -96,14 +105,14 @@
                     </div>
                 </div>
 
-                @if($feedback->admin_response)
+                @if($feedback->response)
                     <div class="row">
                         <div class="col-md-3">
                             <strong>Admin Response:</strong>
                         </div>
                         <div class="col-md-9">
                             <div class="alert alert-info mb-0">
-                                <i class="fas fa-reply"></i> {{ $feedback->admin_response }}
+                                <i class="fas fa-reply"></i> {{ $feedback->response }}
                             </div>
                             @if($feedback->updated_at != $feedback->created_at)
                                 <small class="text-muted">Responded: {{ $feedback->updated_at->format('M d, Y H:i') }}</small>
@@ -115,12 +124,12 @@
         </div>
 
         <!-- Respond to Feedback -->
-        @if(!$feedback->admin_response || $feedback->status != 'resolved')
+        @if(!$feedback->response || $feedback->status != 'responded')
             <div class="card shadow mb-4">
                 <div class="card-header py-3 bg-success text-white">
                     <h6 class="m-0 font-weight-bold">
                         <i class="fas fa-reply"></i> 
-                        {{ $feedback->admin_response ? 'Update Response' : 'Respond to Feedback' }}
+                        {{ $feedback->response ? 'Update Response' : 'Respond to Feedback' }}
                     </h6>
                 </div>
                 <div class="card-body">
@@ -129,13 +138,13 @@
                         @method('PATCH')
                         
                         <div class="form-group">
-                            <label for="admin_response">Your Response <span class="text-danger">*</span></label>
-                            <textarea name="admin_response" id="admin_response" 
-                                class="form-control @error('admin_response') is-invalid @enderror" 
+                            <label for="response">Your Response <span class="text-danger">*</span></label>
+                            <textarea name="response" id="response" 
+                                class="form-control @error('response') is-invalid @enderror" 
                                 rows="5" 
                                 placeholder="Write your response to the user..."
-                                required>{{ old('admin_response', $feedback->admin_response) }}</textarea>
-                            @error('admin_response')
+                                required>{{ old('response', $feedback->response) }}</textarea>
+                            @error('response')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                             <small class="form-text text-muted">
@@ -172,8 +181,7 @@
                         <label for="status">Change Status</label>
                         <select name="status" id="status" class="form-control">
                             <option value="pending" {{ $feedback->status == 'pending' ? 'selected' : '' }}>Pending</option>
-                            <option value="reviewed" {{ $feedback->status == 'reviewed' ? 'selected' : '' }}>Reviewed</option>
-                            <option value="resolved" {{ $feedback->status == 'resolved' ? 'selected' : '' }}>Resolved</option>
+                            <option value="responded" {{ $feedback->status == 'responded' ? 'selected' : '' }}>Responded</option>
                         </select>
                     </div>
 

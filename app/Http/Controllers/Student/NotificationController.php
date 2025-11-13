@@ -25,9 +25,9 @@ class NotificationController extends Controller
         // Filter by read status
         if ($request->filled('status')) {
             if ($request->status === 'unread') {
-                $query->where('is_read', false);
+                $query->where('read_at', false);
             } elseif ($request->status === 'read') {
-                $query->where('is_read', true);
+                $query->where('read_at', true);
             }
         }
         
@@ -35,7 +35,7 @@ class NotificationController extends Controller
         
         // Get unread count
         $unreadCount = Notification::where('user_id', $user->id)
-            ->where('is_read', false)
+            ->where('read_at', false)
             ->count();
         
         return view('student.notifications.index', compact('notifications', 'unreadCount'));
@@ -51,7 +51,7 @@ class NotificationController extends Controller
         }
         
         $notification->update([
-            'is_read' => true,
+            'read_at' => true,
             'read_at' => now()
         ]);
         
@@ -69,9 +69,9 @@ class NotificationController extends Controller
     public function markAllAsRead(Request $request)
     {
         Notification::where('user_id', $request->user()->id)
-            ->where('is_read', false)
+            ->where('read_at', false)
             ->update([
-                'is_read' => true,
+                'read_at' => true,
                 'read_at' => now()
             ]);
         
@@ -98,7 +98,7 @@ class NotificationController extends Controller
     public function unread(Request $request)
     {
         $notifications = Notification::where('user_id', $request->user()->id)
-            ->where('is_read', false)
+            ->where('read_at', false)
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get();
