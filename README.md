@@ -236,8 +236,8 @@ Quiz LMS is a modern, feature-rich Learning Management System designed for educa
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/rozuragon/quiz-lms.git
-cd quiz-lms
+git clone https://github.com/rozuragon/quiz-lms-system.git
+cd quiz-lms-system
 
 # 2. Install PHP dependencies
 composer install
