@@ -75,14 +75,7 @@
                         <td>{{ $assignment->section->section_name }}</td>
                         <td>{{ $assignment->section->course->course_name }}</td>
                         <td>
-                            @php
-                                $enrolledCount = \App\Models\Enrollment::where('section_id', $assignment->section_id)
-                                    ->where('academic_year', request('academic_year', $currentAcademicYear))
-                                    ->where('semester', request('semester', $currentSemester))
-                                    ->where('status', 'enrolled')
-                                    ->count();
-                            @endphp
-                            <span class="badge badge-info">{{ $enrolledCount }} students</span>
+                            <span class="badge badge-info">{{ $enrollmentCounts[$assignment->id] ?? 0 }} students</span>
                         </td>
                         <td>
                             <a href="{{ route('instructor.student-progress.export', ['section' => $assignment->section_id, 'academic_year' => request('academic_year', $currentAcademicYear), 'semester' => request('semester', $currentSemester)]) }}" 

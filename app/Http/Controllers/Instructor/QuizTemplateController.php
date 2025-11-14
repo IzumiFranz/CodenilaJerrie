@@ -11,7 +11,12 @@ class QuizTemplateController extends Controller
 {
     public function index()
     {
-        $instructor = auth()->user()->instructor;
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor) {
+            abort(403, 'User is not an instructor.');
+        }
         
         $templates = QuizTemplate::where('instructor_id', $instructor->id)
             ->orWhere('is_shared', true)
@@ -43,7 +48,13 @@ class QuizTemplateController extends Controller
             'is_shared' => ['boolean'],
         ]);
 
-        $instructor = auth()->user()->instructor;
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor) {
+            abort(403, 'User is not an instructor.');
+        }
+        
         $validated['instructor_id'] = $instructor->id;
 
         $template = QuizTemplate::create($validated);
@@ -57,7 +68,12 @@ class QuizTemplateController extends Controller
 
     public function destroy(QuizTemplate $quizTemplate)
     {
-        $this->authorize('delete', $quizTemplate);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $quizTemplate->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to delete this quiz template.');
+        }
 
         AuditLog::log('quiz_template_deleted', $quizTemplate);
         $quizTemplate->delete();

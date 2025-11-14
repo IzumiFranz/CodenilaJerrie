@@ -11,8 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('lessons_and_quizzes', function (Blueprint $table) {
-            //
+        Schema::table('lessons', function (Blueprint $table) {
+            $table->timestamp('publish_at')->nullable()->after('published_at');
+        });
+
+        Schema::table('quizzes', function (Blueprint $table) {
+            $table->timestamp('publish_at')->nullable()->after('published_at');
         });
     }
 
@@ -21,8 +25,12 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('lessons_and_quizzes', function (Blueprint $table) {
-            //
+        Schema::table('lessons', function (Blueprint $table) {
+            $table->dropColumn('publish_at');
+        });
+
+        Schema::table('quizzes', function (Blueprint $table) {
+            $table->dropColumn('publish_at');
         });
     }
 };

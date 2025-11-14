@@ -18,7 +18,12 @@ class InstructorDashboardController extends Controller
 {
     public function index()
     {
-        $instructor = auth()->user()->instructor;
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor) {
+            abort(403, 'User is not an instructor.');
+        }
 
         // Academic year and semester
         $year = now()->year;
@@ -47,10 +52,18 @@ class InstructorDashboardController extends Controller
         $totalSections = $assignments->count();
         $totalSubjects = $assignments->pluck('subject_id')->unique()->count();
 
-        // --- Students ---
-        $totalStudents = 0;
+        // --- Students --- (Optimize: Calculate in one query instead of loop)
+        $sectionIds = $assignments->pluck('section_id');
+        $totalStudents = Enrollment::whereIn('section_id', $sectionIds)
+            ->where('academic_year', $currentAcademicYear)
+            ->where('semester', $currentSemester)
+            ->where('status', 'enrolled')
+            ->count();
+        
+        // Pre-calculate enrollment counts for each assignment to avoid queries in view
+        $enrollmentCounts = [];
         foreach ($assignments as $assignment) {
-            $totalStudents += Enrollment::where('section_id', $assignment->section_id)
+            $enrollmentCounts[$assignment->id] = Enrollment::where('section_id', $assignment->section_id)
                 ->where('academic_year', $currentAcademicYear)
                 ->where('semester', $currentSemester)
                 ->where('status', 'enrolled')
@@ -127,7 +140,8 @@ class InstructorDashboardController extends Controller
             'totalAttempts', 'completedAttempts', 'inProgressAttempts', 'averageScore',
             'recentLessons', 'recentQuizzes', 'recentAttempts', 'assignments',
             'subjects', 'performanceBySubject', 'currentAcademicYear', 'currentSemester',
-            'classAverage', 'hardestQuiz', 'popularLesson', 'strugglingStudents', 'ai_stats'
+            'classAverage', 'hardestQuiz', 'popularLesson', 'strugglingStudents', 'ai_stats',
+            'enrollmentCounts'
         ));
     }
 

@@ -13,7 +13,12 @@ class QuestionTagController extends Controller
 {
     public function index(Request $request)
     {
-        $instructor = auth()->user()->instructor;
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor) {
+            abort(403, 'User is not an instructor.');
+        }
         
         $query = QuestionTag::where('instructor_id', $instructor->id)
             ->with('subject');
@@ -39,7 +44,12 @@ class QuestionTagController extends Controller
 
     public function create()
     {
-        $instructor = auth()->user()->instructor;
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor) {
+            abort(403, 'User is not an instructor.');
+        }
         
         $subjectIds = InstructorSubjectSection::where('instructor_id', $instructor->id)
             ->pluck('subject_id')

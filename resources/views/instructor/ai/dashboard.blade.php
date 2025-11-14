@@ -7,13 +7,10 @@
         <h1 class="h3 mb-0 text-gray-800">
             <i class="fas fa-robot fa-fw"></i> AI Assistant Dashboard
         </h1>
-        <div class="btn-group">
-            <button class="btn btn-primary" data-toggle="modal" data-target="#aiGenerateModal">
-                <i class="fas fa-magic"></i> Generate Questions
-            </button>
-            <button class="btn btn-success" onclick="bulkValidateQuestions()">
-                <i class="fas fa-check-double"></i> Validate All
-            </button>
+        <div>
+            <a href="{{ route('instructor.ai.index') }}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-history"></i> View All Jobs
+            </a>
         </div>
     </div>
 
@@ -25,12 +22,15 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Questions Generated
+                                Question Generation
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">
                                 {{ $stats['total_generated'] ?? 0 }}
                             </div>
-                            <div class="text-xs text-muted">This month: {{ $stats['monthly_generated'] ?? 0 }}</div>
+                            <div class="text-xs text-gray-600">Questions Created</div>
+                            @if(isset($stats['monthly_generated']) && $stats['monthly_generated'] > 0)
+                                <div class="text-xs text-muted mt-1">This month: {{ $stats['monthly_generated'] }}</div>
+                            @endif
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-brain fa-2x text-gray-300"></i>
@@ -46,12 +46,15 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Validations Done
+                                Validations
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">
                                 {{ $stats['total_validated'] ?? 0 }}
                             </div>
-                            <div class="text-xs text-muted">Avg Score: {{ $stats['avg_validation_score'] ?? 0 }}%</div>
+                            <div class="text-xs text-gray-600">Questions Checked</div>
+                            @if(isset($stats['avg_validation_score']) && $stats['avg_validation_score'] > 0)
+                                <div class="text-xs text-muted mt-1">Avg Score: {{ number_format($stats['avg_validation_score'], 1) }}%</div>
+                            @endif
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-check-circle fa-2x text-gray-300"></i>
@@ -67,12 +70,12 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Quizzes Analyzed
+                                Quiz Analysis
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">
                                 {{ $stats['total_analyzed'] ?? 0 }}
                             </div>
-                            <div class="text-xs text-muted">Insights generated</div>
+                            <div class="text-xs text-gray-600">Quizzes Analyzed</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-chart-line fa-2x text-gray-300"></i>
@@ -88,15 +91,15 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                API Usage
+                                This Month
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                ${{ number_format($stats['estimated_cost'] ?? 0, 2) }}
+                                {{ $stats['monthly_jobs'] ?? 0 }}
                             </div>
-                            <div class="text-xs text-muted">This month</div>
+                            <div class="text-xs text-gray-600">AI Requests</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                            <i class="fas fa-server fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
@@ -104,151 +107,40 @@
         </div>
     </div>
 
-    <!-- AI Suggestions -->
-    @if(isset($suggestions) && count($suggestions) > 0)
+    <!-- Quick AI Actions -->
     <div class="row mb-4">
         <div class="col-lg-12">
-            <div class="card shadow border-left-success">
-                <div class="card-header py-3 bg-gradient-success">
-                    <h6 class="m-0 font-weight-bold text-white">
-                        <i class="fas fa-lightbulb"></i> AI Suggestions for You
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-magic"></i> Quick AI Actions
                     </h6>
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        @foreach($suggestions as $suggestion)
-                        <div class="col-md-6 mb-3">
-                            <div class="alert alert-success mb-0">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <h6 class="alert-heading">
-                                            <i class="fas {{ $suggestion['icon'] }}"></i> 
-                                            {{ $suggestion['title'] }}
-                                        </h6>
-                                        <p class="mb-2">{{ $suggestion['description'] }}</p>
-                                        <small class="text-muted">
-                                            <i class="fas fa-clock"></i> {{ $suggestion['reason'] }}
-                                        </small>
-                                    </div>
-                                    <a href="{{ $suggestion['action_url'] }}" class="btn btn-sm btn-success ml-2">
-                                        <i class="fas fa-arrow-right"></i>
-                                    </a>
-                                </div>
-                            </div>
+                        <div class="col-md-4 mb-3">
+                            <button type="button" class="btn btn-primary btn-block btn-lg" data-toggle="modal" data-target="#aiGenerateModal">
+                                <i class="fas fa-plus-circle"></i> Generate Questions
+                            </button>
+                            <small class="text-muted d-block mt-2">
+                                Create quiz questions from your lessons using AI
+                            </small>
                         </div>
-                        @endforeach
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
-
-    <!-- Smart Recommendations -->
-    <div class="row mb-4">
-        <div class="col-lg-6">
-            <div class="card shadow">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-magic"></i> What You Can Do
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="list-group">
-                        <a href="#" class="list-group-item list-group-item-action" data-toggle="modal" data-target="#aiGenerateModal">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">
-                                    <i class="fas fa-brain text-primary"></i> Generate Questions from Lessons
-                                </h6>
-                                <small class="text-primary">Quick</small>
-                            </div>
-                            <p class="mb-1 text-muted">
-                                Let AI create quiz questions automatically from your lesson content
-                            </p>
-                            <small class="text-success">Saves 30-60 minutes per quiz</small>
-                        </a>
-
-                        <a href="{{ route('instructor.question-bank.index') }}" class="list-group-item list-group-item-action">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">
-                                    <i class="fas fa-check-double text-success"></i> Validate Existing Questions
-                                </h6>
-                                <small class="text-success">Recommended</small>
-                            </div>
-                            <p class="mb-1 text-muted">
-                                Get AI feedback on question quality, clarity, and effectiveness
-                            </p>
-                            <small class="text-info">Improve question quality by 40%</small>
-                        </a>
-
-                        <a href="{{ route('instructor.quizzes.index') }}" class="list-group-item list-group-item-action">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">
-                                    <i class="fas fa-chart-line text-info"></i> Analyze Quiz Performance
-                                </h6>
-                                <small class="text-info">Insights</small>
-                            </div>
-                            <p class="mb-1 text-muted">
-                                Get detailed analytics on student performance and question effectiveness
-                            </p>
-                            <small class="text-warning">Identify weak areas instantly</small>
-                        </a>
-
-                        <a href="#" class="list-group-item list-group-item-action" onclick="showBulkOperations()">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">
-                                    <i class="fas fa-layer-group text-warning"></i> Bulk Operations
-                                </h6>
-                                <small class="text-warning">Advanced</small>
-                            </div>
-                            <p class="mb-1 text-muted">
-                                Generate or validate multiple items at once
-                            </p>
-                            <small class="text-danger">Process 100+ questions in minutes</small>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-6">
-            <div class="card shadow">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-info">
-                        <i class="fas fa-chart-pie"></i> Usage Insights
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <!-- Usage Chart -->
-                    <canvas id="usageChart" height="200"></canvas>
-                    
-                    <div class="mt-4">
-                        <h6 class="font-weight-bold">Performance Metrics</h6>
-                        <div class="row">
-                            <div class="col-6 mb-3">
-                                <div class="text-center p-3 bg-light rounded">
-                                    <div class="h4 mb-0 text-primary">{{ $stats['avg_generation_time'] ?? '45s' }}</div>
-                                    <small class="text-muted">Avg Generation Time</small>
-                                </div>
-                            </div>
-                            <div class="col-6 mb-3">
-                                <div class="text-center p-3 bg-light rounded">
-                                    <div class="h4 mb-0 text-success">{{ $stats['success_rate'] ?? '98%' }}</div>
-                                    <small class="text-muted">Success Rate</small>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="text-center p-3 bg-light rounded">
-                                    <div class="h4 mb-0 text-info">{{ $stats['questions_per_hour'] ?? '120' }}</div>
-                                    <small class="text-muted">Questions/Hour</small>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="text-center p-3 bg-light rounded">
-                                    <div class="h4 mb-0 text-warning">{{ $stats['monthly_limit'] ?? '500' }}</div>
-                                    <small class="text-muted">Monthly Limit</small>
-                                </div>
-                            </div>
+                        <div class="col-md-4 mb-3">
+                            <a href="{{ route('instructor.question-bank.index') }}?ai_validate=1" class="btn btn-success btn-block btn-lg">
+                                <i class="fas fa-check-double"></i> Validate Questions
+                            </a>
+                            <small class="text-muted d-block mt-2">
+                                Check quality and get improvement suggestions
+                            </small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <a href="{{ route('instructor.quizzes.index') }}" class="btn btn-info btn-block btn-lg">
+                                <i class="fas fa-chart-bar"></i> Analyze Quizzes
+                            </a>
+                            <small class="text-muted d-block mt-2">
+                                Get insights on quiz performance and difficulty
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -354,93 +246,44 @@
     </div>
 </div>
 
-@include('instructor.question-bank.partials.ai-generate-modal')
+@include('instructor.question-bank.partials.ai-generate-modal', ['subjects' => $subjects ?? collect()])
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
-// Usage Chart
-const ctx = document.getElementById('usageChart').getContext('2d');
-new Chart(ctx, {
-    type: 'line',
-    data: {
-        labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-        datasets: [
-            {
-                label: 'Questions Generated',
-                data: {{ json_encode($chartData['generated'] ?? [0,0,0,0]) }},
-                borderColor: 'rgb(78, 115, 223)',
-                backgroundColor: 'rgba(78, 115, 223, 0.1)',
-                tension: 0.4
-            },
-            {
-                label: 'Validations',
-                data: {{ json_encode($chartData['validated'] ?? [0,0,0,0]) }},
-                borderColor: 'rgb(28, 200, 138)',
-                backgroundColor: 'rgba(28, 200, 138, 0.1)',
-                tension: 0.4
-            }
-        ]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                position: 'bottom'
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true
-            }
-        }
-    }
-});
-
 // Auto-refresh if there are processing jobs
 @if(isset($hasProcessingJobs) && $hasProcessingJobs)
-    setTimeout(() => {
-        location.reload();
-    }, 10000); // Refresh every 10 seconds
-@endif
-
-function bulkValidateQuestions() {
-    Swal.fire({
-        title: 'Bulk Validate Questions?',
-        text: 'This will validate all unvalidated questions in your question bank.',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, validate all',
-        cancelButtonText: 'Cancel'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Implement bulk validation
-            window.location.href = '{{ route("instructor.question-bank.index") }}?bulk_validate=1';
+    let refreshInterval = setInterval(() => {
+        // Check job statuses via AJAX instead of full page reload
+        let processingJobIds = {{ $recentJobs->where('status', 'processing')->pluck('id')->toJson() }};
+        
+        if (processingJobIds.length > 0) {
+            let stillProcessing = false;
+            // Poll each processing job
+            processingJobIds.forEach(jobId => {
+                $.get(`/instructor/ai/job/${jobId}/status`, function(data) {
+                    if (data.status === 'processing') {
+                        stillProcessing = true;
+                    } else {
+                        // Job completed or failed, reload page
+                        clearInterval(refreshInterval);
+                        location.reload();
+                    }
+                }).fail(function() {
+                    clearInterval(refreshInterval);
+                    location.reload();
+                });
+            });
+            
+            if (!stillProcessing && processingJobIds.length > 0) {
+                clearInterval(refreshInterval);
+                location.reload();
+            }
+        } else {
+            clearInterval(refreshInterval);
+            location.reload();
         }
-    });
-}
-
-function showBulkOperations() {
-    Swal.fire({
-        title: 'Bulk Operations',
-        html: `
-            <div class="list-group text-left">
-                <a href="#" class="list-group-item list-group-item-action" onclick="bulkGenerate()">
-                    <i class="fas fa-brain text-primary"></i> Bulk Generate Questions
-                </a>
-                <a href="#" class="list-group-item list-group-item-action" onclick="bulkValidateQuestions()">
-                    <i class="fas fa-check-double text-success"></i> Bulk Validate Questions
-                </a>
-                <a href="#" class="list-group-item list-group-item-action" onclick="bulkAnalyze()">
-                    <i class="fas fa-chart-line text-info"></i> Bulk Analyze Quizzes
-                </a>
-            </div>
-        `,
-        showConfirmButton: false,
-        showCloseButton: true
-    });
-}
+    }, 5000); // Check every 5 seconds
+@endif
 </script>
 @endpush
 @endsection

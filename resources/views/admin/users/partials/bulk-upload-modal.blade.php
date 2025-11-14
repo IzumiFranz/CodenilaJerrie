@@ -13,8 +13,7 @@
             <form action="{{ route('admin.users.bulk-upload') }}" 
                   method="POST" 
                   enctype="multipart/form-data" 
-                  id="bulkUploadForm"
-                  data-confirm="Are you sure you want to upload this CSV file? This will create multiple user accounts based on the data in the file.">
+                  id="bulkUploadForm">
                 @csrf
                 
                 <div class="modal-body">
@@ -285,10 +284,16 @@ $(document).ready(function() {
             return false;
         }
         
+        // Custom confirmation for bulk upload
+        const confirmed = confirm('Are you sure you want to upload this CSV file? This will create multiple user accounts based on the data in the file.');
+        if (!confirmed) {
+            e.preventDefault();
+            return false;
+        }
+        
         // Show loading state
         $('#submitBulkUpload').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Uploading...');
         
-        // Form will submit normally (global confirmation system will handle confirmation)
         return true;
     });
 

@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('lessons', function (Blueprint $table) {
-            //
+            $table->foreignId('prerequisite_lesson_id')->nullable()->after('order')
+                ->constrained('lessons')->onDelete('set null');
+            $table->index('prerequisite_lesson_id');
         });
     }
 
@@ -22,7 +24,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('lessons', function (Blueprint $table) {
-            //
+            $table->dropForeign(['prerequisite_lesson_id']);
+            $table->dropColumn('prerequisite_lesson_id');
         });
     }
 };

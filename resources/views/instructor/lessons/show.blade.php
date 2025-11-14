@@ -8,19 +8,41 @@
         <a href="{{ route('instructor.lessons.edit', $lesson) }}" class="btn btn-warning btn-sm">
             <i class="fas fa-edit mr-1"></i> Edit
         </a>
-        @if($lesson->file_path)
-            <a href="{{ route('instructor.lessons.download', $lesson) }}" class="btn btn-info btn-sm">
-                <i class="fas fa-download mr-1"></i> Download File
-            </a>
-        @endif
-        <form action="{{ route('instructor.lessons.toggle-publish', $lesson) }}" method="POST" class="d-inline">
-            @csrf
-            <button type="submit" class="btn btn-{{ $lesson->is_published ? 'secondary' : 'success' }}">
-                <i class="fas fa-{{ $lesson->is_published ? 'eye-slash' : 'check' }}"></i>
-                {{ $lesson->is_published ? 'Unpublish' : 'Publish' }}
+        <div class="btn-group">
+            <button type="button" class="btn btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown">
+                <i class="fas fa-cog"></i> More
             </button>
-        </form>
-        <a href="{{ route('instructor.lessons.index') }}" class="btn btn-secondary">
+            <div class="dropdown-menu dropdown-menu-right">
+                @if($lesson->file_path)
+                    <a href="{{ route('instructor.lessons.download', $lesson) }}" class="dropdown-item">
+                        <i class="fas fa-download text-info"></i> Download File
+                    </a>
+                @endif
+                <form action="{{ route('instructor.lessons.toggle-publish', $lesson) }}" method="POST" class="d-inline">
+                    @csrf
+                    <button type="submit" class="dropdown-item">
+                        <i class="fas fa-{{ $lesson->is_published ? 'eye-slash' : 'check' }} text-{{ $lesson->is_published ? 'secondary' : 'success' }}"></i>
+                        {{ $lesson->is_published ? 'Unpublish' : 'Publish' }}
+                    </button>
+                </form>
+                <form action="{{ route('instructor.lessons.duplicate', $lesson) }}" method="POST" class="d-inline">
+                    @csrf
+                    <button type="submit" class="dropdown-item">
+                        <i class="fas fa-copy text-info"></i> Duplicate
+                    </button>
+                </form>
+                <div class="dropdown-divider"></div>
+                <form action="{{ route('instructor.lessons.destroy', $lesson) }}" method="POST" class="d-inline"
+                      onsubmit="return confirm('Delete this lesson?')">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="dropdown-item text-danger">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+        <a href="{{ route('instructor.lessons.index') }}" class="btn btn-secondary btn-sm">
             <i class="fas fa-arrow-left"></i> Back
         </a>
     </div>
@@ -51,9 +73,52 @@
                     <hr>
                     <div class="alert alert-info">
                         <i class="fas fa-paperclip mr-2"></i>
-                        <strong>Attached File:</strong> {{ $lesson->file_name }}
+                        <strong>Legacy Attached File:</strong> {{ $lesson->file_name }}
                         <a href="{{ route('instructor.lessons.download', $lesson) }}" class="btn btn-sm btn-info float-right">
                             <i class="fas fa-download"></i> Download
+                        </a>
+                    </div>
+                @endif
+
+                @if($lesson->attachments && $lesson->attachments->count() > 0)
+                    <hr>
+                    <h5 class="mb-3"><i class="fas fa-paperclip mr-2"></i>Attachments</h5>
+                    <div class="list-group">
+                        @foreach($lesson->attachments as $attachment)
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-file mr-2 text-primary"></i>
+                                    <strong>{{ $attachment->original_filename }}</strong>
+                                    @if($attachment->description)
+                                        <br><small class="text-muted">{{ $attachment->description }}</small>
+                                    @endif
+                                    <br><small class="text-muted">
+                                        <i class="fas fa-download mr-1"></i>{{ $attachment->download_count }} downloads
+                                        <span class="mx-2">•</span>
+                                        {{ $attachment->formatted_file_size }}
+                                    </small>
+                                </div>
+                                <div>
+                                    @if($attachment->isImage() || $attachment->file_extension === 'pdf')
+                                        <a href="{{ route('instructor.lessons.attachments.view', [$lesson, $attachment]) }}" 
+                                           target="_blank" 
+                                           class="btn btn-sm btn-outline-primary mr-2">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                    @endif
+                                    <a href="{{ route('instructor.lessons.attachments.download', [$lesson, $attachment]) }}" 
+                                       class="btn btn-sm btn-primary">
+                                        <i class="fas fa-download"></i> Download
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                    <div class="mt-3">
+                        <a href="{{ route('instructor.lessons.attachments', $lesson) }}" class="btn btn-sm btn-info">
+                            <i class="fas fa-cog mr-1"></i> Manage Attachments
                         </a>
                     </div>
                 @endif
@@ -79,23 +144,33 @@
                     </tr>
                     <tr>
                         <th>Subject:</th>
-                        <td>{{ $lesson->subject->subject_name }}</td>
+                        <td>{{ $lesson->subject->subject_name ?? 'N/A' }}</td>
                     </tr>
                     <tr>
                         <th>Course:</th>
-                        <td>{{ $lesson->subject->course->course_name }}</td>
+                        <td>{{ $lesson->subject->course->course_name ?? 'N/A' }}</td>
                     </tr>
                     <tr>
                         <th>Order:</th>
                         <td>{{ $lesson->order }}</td>
                     </tr>
                     <tr>
-                        <th>File:</th>
+                        <th>Legacy File:</th>
                         <td>
                             @if($lesson->file_path)
                                 <i class="fas fa-check-circle text-success"></i> Yes
                             @else
                                 <i class="fas fa-times-circle text-danger"></i> No
+                            @endif
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Attachments:</th>
+                        <td>
+                            @if($lesson->attachments && $lesson->attachments->count() > 0)
+                                <i class="fas fa-check-circle text-success"></i> {{ $lesson->attachments->count() }} file(s)
+                            @else
+                                <i class="fas fa-times-circle text-danger"></i> None
                             @endif
                         </td>
                     </tr>

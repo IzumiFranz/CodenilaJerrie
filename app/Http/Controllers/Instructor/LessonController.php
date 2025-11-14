@@ -119,7 +119,12 @@ class LessonController extends Controller
      */
     public function create(Request $request)
     {
-        $instructor = auth()->user()->instructor;
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor) {
+            abort(403, 'User is not an instructor.');
+        }
         
         // Get subjects taught by this instructor
         $subjectIds = InstructorSubjectSection::where('instructor_id', $instructor->id)
@@ -244,12 +249,19 @@ class LessonController extends Controller
      */
     public function show(Lesson $lesson)
     {
-        $this->authorize('view', $lesson);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $lesson->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to view this lesson.');
+        }
         
         $lesson->load([
-            'subject',
+            'subject.course',
+            'instructor.user',
             'attachments' => function($query) {
-                $query->where('is_visible', true)->orderBy('display_order');
+                // Instructors can see all attachments, not just visible ones
+                $query->orderBy('display_order');
             }
         ]);
 
@@ -272,9 +284,12 @@ class LessonController extends Controller
      */
     public function edit(Lesson $lesson)
     {
-        $this->authorize('update', $lesson);
+        $user = auth()->user();
+        $instructor = $user->instructor;
         
-        $instructor = auth()->user()->instructor;
+        if (!$instructor || $lesson->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to edit this lesson.');
+        }
         
         // Get subjects taught by this instructor
         $subjectIds = InstructorSubjectSection::where('instructor_id', $instructor->id)
@@ -292,7 +307,12 @@ class LessonController extends Controller
      */
     public function update(Request $request, Lesson $lesson)
     {
-        $this->authorize('update', $lesson);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $lesson->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to update this lesson.');
+        }
 
         $validated = $request->validate([
             'subject_id' => 'required|exists:subjects,id',
@@ -388,7 +408,12 @@ class LessonController extends Controller
      */
     public function destroy(Lesson $lesson)
     {
-        $this->authorize('delete', $lesson);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $lesson->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to delete this lesson.');
+        }
 
         try {
             DB::beginTransaction();
@@ -416,27 +441,36 @@ class LessonController extends Controller
      */
     public function togglePublish(Lesson $lesson)
     {
-        $this->authorize('update', $lesson);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $lesson->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to toggle publish status for this lesson.');
+        }
         
         try {
             DB::beginTransaction();
 
-            $wasPublished = $lesson->status === 'published';
-            $newStatus = $wasPublished ? 'draft' : 'published';
-            
-            $lesson->update(['status' => $newStatus]);
+            $wasPublished = $lesson->is_published;
+            $lesson->is_published = !$lesson->is_published;
+            $lesson->published_at = $lesson->is_published ? now() : null;
+            $lesson->save();
 
             // Audit log
-            AuditLog::log('lesson_publish_toggled', $lesson, ['old_status' => $wasPublished ? 'published' : 'draft'], ['new_status' => $newStatus]);
+            AuditLog::log('lesson_publish_toggled', $lesson, [
+                'old_status' => $wasPublished ? 'published' : 'draft'
+            ], [
+                'new_status' => $lesson->is_published ? 'published' : 'draft'
+            ]);
 
             // Send notifications if newly published
-            if (!$wasPublished && $newStatus === 'published') {
+            if (!$wasPublished && $lesson->is_published) {
                 $this->notifyStudentsAboutLesson($lesson);
             }
 
             DB::commit();
             
-            $message = $newStatus === 'published' 
+            $message = $lesson->is_published 
                 ? 'Lesson published successfully!' 
                 : 'Lesson unpublished successfully.';
             
@@ -453,7 +487,12 @@ class LessonController extends Controller
      */
     public function duplicate(Lesson $lesson)
     {
-        $this->authorize('view', $lesson);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $lesson->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to duplicate this lesson.');
+        }
 
         try {
             DB::beginTransaction();
@@ -513,7 +552,12 @@ class LessonController extends Controller
      */
     public function schedule(Request $request, Lesson $lesson)
     {
-        $this->authorize('update', $lesson);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $lesson->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to schedule this lesson.');
+        }
         
         $validated = $request->validate([
             'scheduled_publish_at' => 'nullable|date|after:now',
@@ -547,7 +591,12 @@ class LessonController extends Controller
      */
     public function cancelSchedule(Lesson $lesson)
     {
-        $this->authorize('update', $lesson);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $lesson->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to cancel schedule for this lesson.');
+        }
         
         try {
             $lesson->update([
@@ -571,7 +620,12 @@ class LessonController extends Controller
      */
     public function viewStatistics(Lesson $lesson)
     {
-        $this->authorize('view', $lesson);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $lesson->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to view statistics for this lesson.');
+        }
         
         // Statistics
         $stats = [
@@ -632,7 +686,12 @@ class LessonController extends Controller
      */
     public function attachments(Lesson $lesson)
     {
-        $this->authorize('update', $lesson);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $lesson->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to manage attachments for this lesson.');
+        }
 
         $lesson->load(['attachments.uploader', 'attachments.downloads']);
         
@@ -646,7 +705,12 @@ class LessonController extends Controller
      */
     public function uploadAttachments(Request $request, Lesson $lesson)
     {
-        $this->authorize('update', $lesson);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $lesson->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to upload attachments for this lesson.');
+        }
 
         $request->validate([
             'files' => 'required|array|max:10',
@@ -691,7 +755,12 @@ class LessonController extends Controller
      */
     public function deleteAttachment(Lesson $lesson, LessonAttachment $attachment)
     {
-        $this->authorize('update', $lesson);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $lesson->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to delete attachments for this lesson.');
+        }
 
         if ($attachment->lesson_id !== $lesson->id) {
             abort(404);
@@ -719,7 +788,12 @@ class LessonController extends Controller
      */
     public function toggleAttachmentVisibility(Lesson $lesson, LessonAttachment $attachment)
     {
-        $this->authorize('update', $lesson);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $lesson->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to toggle attachment visibility for this lesson.');
+        }
 
         if ($attachment->lesson_id !== $lesson->id) {
             abort(404);
@@ -750,7 +824,12 @@ class LessonController extends Controller
      */
     public function updateAttachmentDescription(Request $request, Lesson $lesson, LessonAttachment $attachment)
     {
-        $this->authorize('update', $lesson);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $lesson->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to update attachment description for this lesson.');
+        }
 
         if ($attachment->lesson_id !== $lesson->id) {
             abort(404);
@@ -779,7 +858,12 @@ class LessonController extends Controller
      */
     public function reorderAttachments(Request $request, Lesson $lesson)
     {
-        $this->authorize('update', $lesson);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $lesson->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to reorder attachments for this lesson.');
+        }
 
         $request->validate([
             'order' => 'required|array',
@@ -805,23 +889,35 @@ class LessonController extends Controller
      */
     public function download(Lesson $lesson)
     {
-        $this->authorize('view', $lesson);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $lesson->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to download this lesson.');
+        }
 
         if (!$lesson->hasFile()) {
             return back()->with('error', 'No lesson file available for download.');
         }
 
         try {
-            $filePath = storage_path('app/' . $lesson->file_path);
-
-            if (!file_exists($filePath)) {
-                return back()->with('error', 'Lesson file not found.');
+            // Check if file exists in public disk
+            if (!Storage::disk('public')->exists($lesson->file_path)) {
+                // Try local disk as fallback
+                if (!Storage::disk('local')->exists($lesson->file_path)) {
+                    return back()->with('error', 'Lesson file not found in storage.');
+                }
+                return Storage::disk('local')->download($lesson->file_path, $lesson->file_name ?? basename($lesson->file_path));
             }
 
-            $fileName = basename($lesson->file_path);
-
-            return response()->download($filePath, $fileName);
+            $fileName = $lesson->file_name ?? basename($lesson->file_path);
+            return Storage::disk('public')->download($lesson->file_path, $fileName);
         } catch (\Exception $e) {
+            \Log::error('Lesson file download failed', [
+                'lesson_id' => $lesson->id,
+                'file_path' => $lesson->file_path,
+                'error' => $e->getMessage()
+            ]);
             return back()->with('error', 'Download failed: ' . $e->getMessage());
         }
     }
@@ -831,13 +927,82 @@ class LessonController extends Controller
      */
     public function downloadAttachment(Lesson $lesson, LessonAttachment $attachment)
     {
-        $this->authorize('view', $lesson);
-
-        if ($attachment->lesson_id !== $lesson->id) {
-            abort(404);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $lesson->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to download attachments for this lesson.');
         }
 
-        return Storage::disk('public')->download($attachment->file_path, $attachment->original_filename);
+        if ($attachment->lesson_id !== $lesson->id) {
+            abort(404, 'Attachment does not belong to this lesson.');
+        }
+
+        try {
+            // Check if file exists
+            if (!Storage::disk('public')->exists($attachment->file_path)) {
+                return back()->with('error', 'Attachment file not found in storage.');
+            }
+
+            // Increment download count
+            $attachment->increment('download_count');
+
+            // Log audit
+            AuditLog::log('lesson_attachment_downloaded', $lesson, [
+                'attachment_id' => $attachment->id,
+                'filename' => $attachment->original_filename,
+            ]);
+
+            return Storage::disk('public')->download($attachment->file_path, $attachment->original_filename);
+        } catch (\Exception $e) {
+            \Log::error('Lesson attachment download failed', [
+                'lesson_id' => $lesson->id,
+                'attachment_id' => $attachment->id,
+                'file_path' => $attachment->file_path,
+                'error' => $e->getMessage()
+            ]);
+            return back()->with('error', 'Download failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * View attachment in browser (for images/PDFs).
+     */
+    public function viewAttachment(Lesson $lesson, LessonAttachment $attachment)
+    {
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $lesson->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to view attachments for this lesson.');
+        }
+
+        if ($attachment->lesson_id !== $lesson->id) {
+            abort(404, 'Attachment does not belong to this lesson.');
+        }
+
+        try {
+            // Check if file exists
+            if (!Storage::disk('public')->exists($attachment->file_path)) {
+                return back()->with('error', 'Attachment file not found in storage.');
+            }
+
+            // Only allow viewing of certain file types
+            if (!in_array($attachment->file_extension, ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                return $this->downloadAttachment($lesson, $attachment);
+            }
+
+            // Return file for viewing
+            return Storage::disk('public')->response($attachment->file_path);
+        } catch (\Exception $e) {
+            Log::error('Lesson attachment view failed', [
+                'lesson_id' => $lesson->id,
+                'attachment_id' => $attachment->id,
+                'file_path' => $attachment->file_path,
+                'error' => $e->getMessage()
+            ]);
+            return back()->with('error', 'View failed: ' . $e->getMessage());
+        }
     }
 
     /**

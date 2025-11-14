@@ -11,6 +11,38 @@
         <a href="{{ route('instructor.quizzes.questions', $quiz) }}" class="btn btn-primary btn-sm">
             <i class="fas fa-tasks mr-1"></i> Manage Questions
         </a>
+        <div class="btn-group">
+            <button type="button" class="btn btn-secondary btn-sm dropdown-toggle" data-toggle="dropdown">
+                <i class="fas fa-cog"></i> More
+            </button>
+            <div class="dropdown-menu dropdown-menu-right">
+                <a href="{{ route('instructor.quizzes.results', $quiz) }}" class="dropdown-item">
+                    <i class="fas fa-chart-bar text-info"></i> View Results
+                </a>
+                <form action="{{ route('instructor.quizzes.toggle-publish', $quiz) }}" method="POST" class="d-inline">
+                    @csrf
+                    <button type="submit" class="dropdown-item">
+                        <i class="fas fa-{{ $quiz->is_published ? 'eye-slash' : 'check' }} text-{{ $quiz->is_published ? 'secondary' : 'success' }}"></i>
+                        {{ $quiz->is_published ? 'Unpublish' : 'Publish' }}
+                    </button>
+                </form>
+                <form action="{{ route('instructor.quizzes.duplicate', $quiz) }}" method="POST" class="d-inline">
+                    @csrf
+                    <button type="submit" class="dropdown-item">
+                        <i class="fas fa-copy text-info"></i> Duplicate
+                    </button>
+                </form>
+                <div class="dropdown-divider"></div>
+                <form action="{{ route('instructor.quizzes.destroy', $quiz) }}" method="POST" class="d-inline"
+                      onsubmit="return confirm('Delete this quiz?')">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="dropdown-item text-danger">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </form>
+            </div>
+        </div>
         <a href="{{ route('instructor.quizzes.index') }}" class="btn btn-secondary btn-sm">
             <i class="fas fa-arrow-left mr-1"></i> Back
         </a>
@@ -131,26 +163,27 @@
                 <a href="{{ route('instructor.quizzes.edit', $quiz) }}" class="btn btn-info">
                     <i class="fas fa-edit mr-2"></i> Edit
                 </a>
-                <a href="{{ route('instructor.quizzes.analytics', $quiz) }}" class="btn btn-primary btn-block mb-2">
-                    <i class="fas fa-chart-line mr-2"></i>Analytics
-                </a>
                 @php
                     $completedAttempts = $quiz->attempts()->where('status', 'completed')->count();
                 @endphp
                 
                 @if($completedAttempts >= 5)
-                <button type="button" class="btn btn-warning analyze-quiz-btn" 
+                <button type="button" class="btn btn-warning btn-block mb-2 analyze-quiz-btn" 
                         data-quiz-id="{{ $quiz->id }}"
                         data-quiz-title="{{ $quiz->title }}"
                         data-attempts-count="{{ $completedAttempts }}">
-                    <i class="fas fa-chart-line mr-2"></i> AI Analysis
+                    <i class="fas fa-robot mr-2"></i> AI Analysis
                 </button>
                 @else
-                <button type="button" class="btn btn-secondary" disabled 
+                <button type="button" class="btn btn-secondary btn-block mb-2" disabled 
                         title="Need at least 5 completed attempts for analysis">
-                    <i class="fas fa-chart-line mr-2"></i> AI Analysis ({{ $completedAttempts }}/5)
+                    <i class="fas fa-robot mr-2"></i> AI Analysis ({{ $completedAttempts }}/5)
                 </button>
                 @endif
+                
+                <a href="{{ route('instructor.quizzes.results', $quiz) }}" class="btn btn-info btn-block mb-2">
+                    <i class="fas fa-chart-bar mr-2"></i>View Results
+                </a>
                 <form action="{{ route('instructor.quizzes.toggle-publish', $quiz) }}" method="POST">
                     @csrf
                     <button type="submit" class="btn btn-{{ $quiz->is_published ? 'secondary' : 'success' }} btn-block mb-2">

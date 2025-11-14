@@ -155,7 +155,7 @@ class UserController extends Controller
                 case 'student':
                     Student::create([
                         'user_id' => $user->id,
-                        'student_number' => $validated['student_number'],
+                        'student_number' => $this->generateStudentNumber(),
                         'course_id' => $validated['course_id'] ?? null,
                         'first_name' => $validated['first_name'],
                         'last_name' => $validated['last_name'],

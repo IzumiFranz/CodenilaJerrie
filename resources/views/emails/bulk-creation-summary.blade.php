@@ -109,10 +109,10 @@ View All Users
 
 ## 📊 System Status
 
-**Email Queue:** {{ DB::table('jobs')->count() }} jobs pending  
-**Total Active Users:** {{ \App\Models\User::where('status', 'active')->count() }}  
-**Total Students:** {{ \App\Models\User::where('role', 'student')->count() }}  
-**Total Instructors:** {{ \App\Models\User::where('role', 'instructor')->count() }}
+**Email Queue:** {{ $stats['queue_jobs'] ?? 0 }} jobs pending  
+**Total Active Users:** {{ $stats['active_users'] ?? 0 }}  
+**Total Students:** {{ $stats['total_students'] ?? 0 }}  
+**Total Instructors:** {{ $stats['total_instructors'] ?? 0 }}
 
 ---
 

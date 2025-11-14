@@ -93,12 +93,16 @@
                         </td>
                         <td>{{ $question->points }}</td>
                         <td>
-                            @foreach($question->tags as $tag)
-                                <span class="badge {{ $tag->getColorBadgeClass() }}" 
-                                    style="background-color: {{ $tag->color }}; font-size: 11px;">
-                                    <i class="fas fa-tag"></i> {{ $tag->name }}
-                                </span>
-                            @endforeach
+                            @if($question->tags && $question->tags->count() > 0)
+                                @foreach($question->tags as $tag)
+                                    <span class="badge {{ method_exists($tag, 'getColorBadgeClass') ? $tag->getColorBadgeClass() : 'badge-info' }}" 
+                                        style="background-color: {{ $tag->color ?? '#17a2b8' }}; font-size: 11px;">
+                                        <i class="fas fa-tag"></i> {{ $tag->name }}
+                                    </span>
+                                @endforeach
+                            @else
+                                <span class="text-muted">No tags</span>
+                            @endif
                         </td>
                         <td>
                             <div class="btn-group btn-group-sm">

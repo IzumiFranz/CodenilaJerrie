@@ -85,23 +85,21 @@ class QuizController extends Controller
             }
         }
 
-        $quizzes = $query->orderBy('available_from', 'desc')->paginate(12);
+        // Optimize: Eager load attempts for this student to avoid N+1 queries
+        $quizzes = $query->with(['attempts' => function($q) use ($student) {
+            $q->where('student_id', $student->id);
+        }])->orderBy('available_from', 'desc')->paginate(12);
 
         /** ------------------------------
          *  STATS + EXTRA INFO
          *  ------------------------------ */
 
+        // Use eager-loaded attempts instead of querying in loop
         foreach ($quizzes as $quiz) {
-            $quiz->student_attempts = $quiz->attempts()
-                ->where('student_id', $student->id)
-                ->where('status', 'completed')
-                ->count();
-
-            $quiz->best_score = $quiz->attempts()
-                ->where('student_id', $student->id)
-                ->where('status', 'completed')
-                ->max('percentage');
-
+            $studentAttempts = $quiz->attempts->where('status', 'completed');
+            
+            $quiz->student_attempts = $studentAttempts->count();
+            $quiz->best_score = $studentAttempts->max('percentage') ?? 0;
             $quiz->can_take = $quiz->studentCanTakeQuiz($student);
         }
 

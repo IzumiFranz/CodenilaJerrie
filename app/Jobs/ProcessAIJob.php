@@ -55,23 +55,13 @@ class ProcessAIJob implements ShouldQueue
     private function generateQuestions(AIService $aiService): array
     {
         $params = $this->aiJob->parameters;
-        $subject = \App\Models\Subject::find($this->aiJob->subject_id);
         
-        $lessons = \App\Models\Lesson::whereIn('id', $params['lesson_ids'] ?? [])
-            ->where('is_published', true)
-            ->get();
-
-        $config = [
-            'count' => $params['count'] ?? 10,
-            'difficulty' => $params['difficulty'] ?? 'medium',
-            'types' => $params['types'] ?? ['multiple_choice'],
-        ];
-
-        $result = $aiService->generateQuestions($subject, $lessons, $config);
-
-        if ($result['success'] && !empty($result['questions'])) {
-            $this->saveGeneratedQuestions($result['questions'], $subject);
+        // Add user_id to parameters for AIService to use
+        if (!isset($params['user_id'])) {
+            $params['user_id'] = $this->aiJob->user_id;
         }
+        
+        $result = $aiService->generateQuestions($params);
 
         return $result;
     }
@@ -102,43 +92,10 @@ class ProcessAIJob implements ShouldQueue
 
     private function gradeEssay(AIService $aiService): array
     {
-        $params = $this->aiJob->parameters;
-        $question = \App\Models\QuestionBank::find($params['question_id']);
-
-        if (!$question) {
-            throw new \Exception('Question not found');
-        }
-
-        return $aiService->gradeEssay($question, $params['answer'] ?? '');
+        // Essay grading not yet implemented in AIService
+        throw new \Exception('Essay grading is not yet implemented');
     }
 
-    private function saveGeneratedQuestions(array $questions, $subject): void
-    {
-        foreach ($questions as $questionData) {
-            $question = \App\Models\QuestionBank::create([
-                'instructor_id' => $this->aiJob->user->instructor->id,
-                'subject_id' => $subject->id,
-                'question_text' => $questionData['question_text'],
-                'type' => $questionData['type'],
-                'points' => $questionData['points'] ?? 1.0,
-                'difficulty' => $questionData['difficulty'] ?? 'medium',
-                'bloom_level' => $questionData['bloom_level'] ?? null,
-                'explanation' => $questionData['explanation'] ?? null,
-                'is_validated' => true,
-            ]);
-
-            if (isset($questionData['choices']) && !empty($questionData['choices'])) {
-                foreach ($questionData['choices'] as $index => $choiceData) {
-                    \App\Models\Choice::create([
-                        'question_id' => $question->id,
-                        'choice_text' => $choiceData['text'],
-                        'is_correct' => $choiceData['is_correct'] ?? false,
-                        'order' => $index + 1,
-                    ]);
-                }
-            }
-        }
-    }
 
     private function notifyUser(string $status): void
     {

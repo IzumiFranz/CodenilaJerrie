@@ -131,7 +131,7 @@ class LessonAttachment extends Model
      */
     public function getFileUrlAttribute(): string
     {
-        return Storage::url($this->file_path);
+        return Storage::disk('public')->url($this->file_path);
     }
 
     /**
@@ -173,8 +173,8 @@ class LessonAttachment extends Model
      */
     public function deleteFile(): bool
     {
-        if (Storage::exists($this->file_path)) {
-            return Storage::delete($this->file_path);
+        if (Storage::disk('public')->exists($this->file_path)) {
+            return Storage::disk('public')->delete($this->file_path);
         }
         return true;
     }

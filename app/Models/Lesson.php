@@ -16,12 +16,15 @@ class Lesson extends Model
         'instructor_id',
         'subject_id',
         'title',
+        'description',
         'content',
         'file_path',
         'file_type',
         'order',
         'is_published',
+        'status',
         'published_at',
+        'publish_at',
         'view_count',
         'scheduled_publish_at',
         'scheduled_unpublish_at',
@@ -29,6 +32,7 @@ class Lesson extends Model
         'word_count',
         'read_time_minutes',
         'file_name',
+        'prerequisite_lesson_id',
     ];
     
     protected function casts(): array
@@ -44,6 +48,7 @@ class Lesson extends Model
             'auto_publish' => 'boolean',
             'word_count' => 'integer',
             'read_time_minutes' => 'integer',
+            'prerequisite_lesson_id' => 'integer',
         ];
     }
 
@@ -206,7 +211,14 @@ public function getViewPercentage($sectionId)
         if (!$this->file_path) {
             return null;
         }
-        return Storage::disk('public')->url($this->file_path);
+        
+        // Check if file exists in public disk
+        if (Storage::disk('public')->exists($this->file_path)) {
+            return Storage::disk('public')->url($this->file_path);
+        }
+        
+        // Fallback: try to generate URL anyway (for legacy files)
+        return asset('storage/' . $this->file_path);
     }
 
     public function hasFile(): bool

@@ -19,12 +19,16 @@ class AIService
     public function __construct()
     {
         $this->apiKey = config('services.openai.api_key');
+        
+        if (empty($this->apiKey)) {
+            throw new \RuntimeException('OpenAI API key is not configured. Please set OPENAI_API_KEY in your .env file.');
+        }
     }
 
     /**
      * Generate questions from lessons using AI
      */
-    public function generateQuestions(array $parameters)
+    public function generateQuestions(array $parameters): array
     {
         try {
             $lessons = Lesson::whereIn('id', $parameters['lesson_ids'])
@@ -45,15 +49,24 @@ class AIService
             
             $questions = $this->parseGeneratedQuestions($response);
 
+            // Get instructor ID from user who created the job
+            $instructorId = \App\Models\User::find($parameters['user_id'] ?? null)?->instructor?->id;
+            
+            if (!$instructorId) {
+                throw new \Exception('Unable to determine instructor for question generation');
+            }
+
             // Save questions to database
             $savedQuestions = $this->saveGeneratedQuestions(
                 $questions, 
-                $parameters['subject_id']
+                $parameters['subject_id'],
+                $instructorId
             );
 
             return [
                 'success' => true,
                 'questions' => $savedQuestions,
+                'question_ids' => array_map(fn($q) => $q->id, $savedQuestions),
                 'count' => count($savedQuestions)
             ];
 
@@ -70,7 +83,7 @@ class AIService
     /**
      * Validate question quality using AI
      */
-    public function validateQuestion(QuestionBank $question)
+    public function validateQuestion(QuestionBank $question): array
     {
         try {
             $prompt = $this->buildValidationPrompt($question);
@@ -82,7 +95,7 @@ class AIService
             // Update question with validation results
             $question->update([
                 'is_validated' => true,
-                'validation_score' => $validation['quality_score'] ?? 0
+                'quality_score' => $validation['quality_score'] ?? 0
             ]);
 
             return [
@@ -103,7 +116,7 @@ class AIService
     /**
      * Analyze quiz performance using AI
      */
-    public function analyzeQuiz(Quiz $quiz)
+    public function analyzeQuiz(Quiz $quiz): array
     {
         try {
             // Get quiz statistics
@@ -325,36 +338,61 @@ PROMPT;
      */
     protected function callOpenAI($prompt)
     {
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $this->apiKey,
-            'Content-Type' => 'application/json',
-        ])->timeout(120)->post('https://api.openai.com/v1/chat/completions', [
-            'model' => $this->model,
-            'messages' => [
-                [
-                    'role' => 'system',
-                    'content' => 'You are an expert educational content creator and analyst. You always respond with valid JSON only, no additional text.'
+        // Validate API key before making request
+        if (empty($this->apiKey)) {
+            throw new \RuntimeException('OpenAI API key is not configured.');
+        }
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->apiKey,
+                'Content-Type' => 'application/json',
+            ])->timeout(120)->post('https://api.openai.com/v1/chat/completions', [
+                'model' => $this->model,
+                'messages' => [
+                    [
+                        'role' => 'system',
+                        'content' => 'You are an expert educational content creator and analyst. You always respond with valid JSON only, no additional text.'
+                    ],
+                    [
+                        'role' => 'user',
+                        'content' => $prompt
+                    ]
                 ],
-                [
-                    'role' => 'user',
-                    'content' => $prompt
-                ]
-            ],
-            'max_tokens' => $this->maxTokens,
-            'temperature' => 0.7,
-        ]);
+                'max_tokens' => $this->maxTokens,
+                'temperature' => 0.7,
+            ]);
 
-        if (!$response->successful()) {
-            throw new \Exception('OpenAI API Error: ' . $response->body());
+            if (!$response->successful()) {
+                $errorBody = $response->body();
+                $errorData = $response->json();
+                
+                $errorMessage = $errorData['error']['message'] ?? $errorBody ?? 'Unknown API error';
+                Log::error('OpenAI API Error', [
+                    'status' => $response->status(),
+                    'error' => $errorMessage,
+                    'response' => $errorBody
+                ]);
+                
+                throw new \Exception('OpenAI API Error: ' . $errorMessage);
+            }
+
+            $data = $response->json();
+            
+            if (!isset($data['choices'][0]['message']['content'])) {
+                Log::error('OpenAI Invalid Response Format', ['response' => $data]);
+                throw new \Exception('Invalid API response format: missing content');
+            }
+
+            return $data['choices'][0]['message']['content'];
+            
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            Log::error('OpenAI Connection Error', ['error' => $e->getMessage()]);
+            throw new \Exception('Failed to connect to OpenAI API. Please check your internet connection.');
+        } catch (\Exception $e) {
+            Log::error('OpenAI Request Failed', ['error' => $e->getMessage()]);
+            throw $e;
         }
-
-        $data = $response->json();
-        
-        if (!isset($data['choices'][0]['message']['content'])) {
-            throw new \Exception('Invalid API response format');
-        }
-
-        return $data['choices'][0]['message']['content'];
     }
 
     /**
@@ -416,28 +454,38 @@ PROMPT;
     /**
      * Save generated questions to database
      */
-    protected function saveGeneratedQuestions($questions, $subjectId)
+    protected function saveGeneratedQuestions($questions, $subjectId, $instructorId = null)
     {
         $saved = [];
 
+        // Get instructor ID - use provided one or get from auth
+        if (!$instructorId) {
+            $instructorId = auth()->check() ? auth()->user()->instructor->id : null;
+        }
+
+        if (!$instructorId) {
+            throw new \Exception('Instructor ID is required to save questions');
+        }
+
         foreach ($questions as $questionData) {
             $question = QuestionBank::create([
-                'instructor_id' => auth()->user()->instructor->id,
+                'instructor_id' => $instructorId,
                 'subject_id' => $subjectId,
                 'question_text' => $questionData['question_text'],
                 'type' => $questionData['type'],
                 'points' => $questionData['points'] ?? 1,
                 'difficulty' => $questionData['difficulty'] ?? 'medium',
                 'bloom_level' => $questionData['bloom_level'] ?? 'understand',
+                'explanation' => $questionData['explanation'] ?? null,
                 'is_validated' => true,
-                'validation_score' => 85, // Default score for AI-generated
+                'quality_score' => 85, // Default score for AI-generated
             ]);
 
             // Handle different question types
             if ($questionData['type'] === 'multiple_choice' && isset($questionData['choices'])) {
                 foreach ($questionData['choices'] as $index => $choice) {
                     Choice::create([
-                        'question_bank_id' => $question->id,
+                        'question_id' => $question->id,
                         'choice_text' => $choice['text'],
                         'is_correct' => $choice['is_correct'] ?? false,
                         'order' => $index + 1,
@@ -445,13 +493,13 @@ PROMPT;
                 }
             } elseif ($questionData['type'] === 'true_false') {
                 Choice::create([
-                    'question_bank_id' => $question->id,
+                    'question_id' => $question->id,
                     'choice_text' => 'True',
                     'is_correct' => $questionData['correct_answer'] === 'true' || $questionData['correct_answer'] === 'True',
                     'order' => 1,
                 ]);
                 Choice::create([
-                    'question_bank_id' => $question->id,
+                    'question_id' => $question->id,
                     'choice_text' => 'False',
                     'is_correct' => $questionData['correct_answer'] === 'false' || $questionData['correct_answer'] === 'False',
                     'order' => 2,

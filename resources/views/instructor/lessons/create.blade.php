@@ -2,6 +2,17 @@
 
 @section('title', 'Create Lesson')
 
+
+@section('content')
+<!-- Page Header -->
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">
+        <i class="fas fa-plus-circle mr-2"></i>Create New Lesson
+    </h1>
+    <a href="{{ route('instructor.lessons.index') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left mr-1"></i> Back to Lessons
+    </a>
+</div>
 @push('styles')
 <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.css" rel="stylesheet">
 <style>
@@ -115,18 +126,6 @@
     }
 </style>
 @endpush
-
-@section('content')
-
-<!-- Page Header -->
-<div class="d-sm-flex align-items-center justify-content-between mb-4">
-    <h1 class="h3 mb-0 text-gray-800">
-        <i class="fas fa-plus-circle mr-2"></i>Create New Lesson
-    </h1>
-    <a href="{{ route('instructor.lessons.index') }}" class="btn btn-secondary btn-sm">
-        <i class="fas fa-arrow-left mr-1"></i> Back to Lessons
-    </a>
-</div>
 
 <!-- Error Messages -->
 @if($errors->any())

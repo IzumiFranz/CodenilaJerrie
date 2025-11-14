@@ -95,36 +95,41 @@
                                 <a href="{{ route('instructor.lessons.edit', $lesson) }}" class="btn btn-warning" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
-
-                                <button type="button" 
-                                        class="btn btn-info" 
-                                        data-toggle="modal" 
-                                        data-target="#scheduleModal{{ $lesson->id }}"
-                                        title="Schedule Publish">
-                                    <i class="fas fa-clock"></i>
-                                </button>
-
-                                <form action="{{ route('instructor.lessons.toggle-publish', $lesson) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="btn btn-{{ $lesson->is_published ? 'secondary' : 'success' }}" 
-                                            title="{{ $lesson->is_published ? 'Unpublish' : 'Publish' }}">
-                                        <i class="fas fa-{{ $lesson->is_published ? 'eye-slash' : 'check' }}"></i>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <i class="fas fa-ellipsis-v"></i>
                                     </button>
-                                </form>
-                                <form action="{{ route('instructor.lessons.duplicate', $lesson) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="btn btn-info" title="Duplicate">
-                                        <i class="fas fa-copy"></i>
-                                    </button>
-                                </form>
-                                <form action="{{ route('instructor.lessons.destroy', $lesson) }}" method="POST" class="d-inline"
-                                      onsubmit="return confirm('Delete this lesson?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-danger" title="Delete">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
+                                    <div class="dropdown-menu dropdown-menu-right">
+                                        <button type="button" 
+                                                class="dropdown-item" 
+                                                data-toggle="modal" 
+                                                data-target="#scheduleModal{{ $lesson->id }}">
+                                            <i class="fas fa-clock text-info"></i> Schedule
+                                        </button>
+                                        <form action="{{ route('instructor.lessons.toggle-publish', $lesson) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="dropdown-item">
+                                                <i class="fas fa-{{ $lesson->is_published ? 'eye-slash' : 'check' }} text-{{ $lesson->is_published ? 'secondary' : 'success' }}"></i> 
+                                                {{ $lesson->is_published ? 'Unpublish' : 'Publish' }}
+                                            </button>
+                                        </form>
+                                        <form action="{{ route('instructor.lessons.duplicate', $lesson) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="dropdown-item">
+                                                <i class="fas fa-copy text-info"></i> Duplicate
+                                            </button>
+                                        </form>
+                                        <div class="dropdown-divider"></div>
+                                        <form action="{{ route('instructor.lessons.destroy', $lesson) }}" method="POST" class="d-inline"
+                                              onsubmit="return confirm('Delete this lesson?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="dropdown-item text-danger">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
                             </div>
                         </td>
                     </tr>

@@ -27,23 +27,35 @@
 
                     <div class="mb-3">
                         <strong>Subject:</strong><br>
-                        <a href="{{ route('admin.subjects.show', $lesson->subject) }}">
-                            {{ $lesson->subject->subject_code }} - {{ $lesson->subject->subject_name }}
-                        </a>
+                        @if($lesson->subject)
+                            <a href="{{ route('admin.subjects.show', $lesson->subject) }}">
+                                {{ $lesson->subject->subject_code ?? 'N/A' }} - {{ $lesson->subject->subject_name ?? 'N/A' }}
+                            </a>
+                        @else
+                            <span class="text-muted">N/A</span>
+                        @endif
                     </div>
 
                     <div class="mb-3">
                         <strong>Course:</strong><br>
-                        {{ $lesson->subject->course->course_code }} - Year {{ $lesson->subject->year_level }}
+                        @if($lesson->subject && $lesson->subject->course)
+                            {{ $lesson->subject->course->course_code ?? 'N/A' }} - Year {{ $lesson->subject->year_level ?? 'N/A' }}
+                        @else
+                            <span class="text-muted">N/A</span>
+                        @endif
                     </div>
 
                     <div class="mb-3">
                         <strong>Instructor:</strong><br>
-                        <a href="{{ route('admin.users.show', $lesson->instructor->user) }}">
-                            {{ $lesson->instructor->full_name }}
-                        </a>
-                        <br>
-                        <small class="text-muted">{{ $lesson->instructor->employee_id }}</small>
+                        @if($lesson->instructor && $lesson->instructor->user)
+                            <a href="{{ route('admin.users.show', $lesson->instructor->user) }}">
+                                {{ $lesson->instructor->full_name ?? 'N/A' }}
+                            </a>
+                            <br>
+                            <small class="text-muted">{{ $lesson->instructor->employee_id ?? 'N/A' }}</small>
+                        @else
+                            <span class="text-muted">N/A</span>
+                        @endif
                     </div>
 
                     <hr>
@@ -191,13 +203,7 @@
                     <h6 class="m-0 font-weight-bold text-primary">Sections with Access</h6>
                 </div>
                 <div class="card-body">
-                    @php
-                        $assignments = $lesson->subject->assignments()
-                            ->with('section.course', 'instructor')
-                            ->get();
-                    @endphp
-
-                    @if($assignments->count() > 0)
+                    @if(isset($assignments) && $assignments->isNotEmpty())
                         <p class="text-muted">This lesson is accessible to students in the following sections:</p>
                         <div class="table-responsive">
                             <table class="table table-sm table-hover">
@@ -236,19 +242,10 @@
             </div>
 
             {{-- Related Lessons --}}
-            @php
-                $relatedLessons = $lesson->subject->lessons()
-                    ->where('id', '!=', $lesson->id)
-                    ->where('is_published', true)
-                    ->orderBy('order')
-                    ->limit(5)
-                    ->get();
-            @endphp
-
-            @if($relatedLessons->count() > 0)
+            @if(isset($relatedLessons) && $relatedLessons->count() > 0)
                 <div class="card shadow mb-4">
                     <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary">Other Lessons in {{ $lesson->subject->subject_code }}</h6>
+                        <h6 class="m-0 font-weight-bold text-primary">Other Lessons in {{ $lesson->subject->subject_code ?? 'Subject' }}</h6>
                     </div>
                     <div class="card-body">
                         <div class="list-group">

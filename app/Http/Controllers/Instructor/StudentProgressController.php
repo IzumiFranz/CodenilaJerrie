@@ -53,6 +53,16 @@ class StudentProgressController extends Controller
 
         $assignments = $query->get();
 
+        // Pre-calculate enrollment counts for each assignment to avoid N+1 queries in view
+        $enrollmentCounts = [];
+        foreach ($assignments as $assignment) {
+            $enrollmentCounts[$assignment->id] = Enrollment::where('section_id', $assignment->section_id)
+                ->where('academic_year', $request->filled('academic_year') ? $request->academic_year : $currentAcademicYear)
+                ->where('semester', $request->filled('semester') ? $request->semester : $currentSemester)
+                ->where('status', 'enrolled')
+                ->count();
+        }
+
         // Get available academic years
         $academicYears = $this->getAcademicYears();
 
@@ -67,7 +77,8 @@ class StudentProgressController extends Controller
             'academicYears', 
             'subjects',
             'currentAcademicYear',
-            'currentSemester'
+            'currentSemester',
+            'enrollmentCounts'
         ));
     }
 

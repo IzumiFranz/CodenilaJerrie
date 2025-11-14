@@ -6,6 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use App\Services\AIService;
 use App\Models\Notification;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,6 +26,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if (!$this->app->runningInConsole()) {
+            $forwardedProto = request()->server('HTTP_X_FORWARDED_PROTO');
+
+            if (config('app.force_https') || $forwardedProto === 'https') {
+                URL::forceScheme('https');
+            }
+        }
+
         View::composer('layouts.admin', function ($view) {
             $unreadCount = 0;
             $recentNotifications = collect();

@@ -56,6 +56,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Force HTTPS URLs
+    |--------------------------------------------------------------------------
+    |
+    | Set FORCE_HTTPS=true in your environment (or explicitly set this config
+    | value) when the application is served behind a proxy that terminates TLS
+    | such as Ngrok or a load balancer. This ensures generated asset URLs
+    | always use HTTPS to avoid mixed-content issues.
+    |
+    */
+
+    'force_https' => env('FORCE_HTTPS', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

@@ -20,8 +20,13 @@ class QuestionBankController extends Controller
     {
         $instructor = auth()->user()->instructor;
         
+        if (!$instructor) {
+            abort(403, 'User is not an instructor.');
+        }
+        
+        // Optimize: Eager load all relationships to avoid N+1 queries
         $query = QuestionBank::where('instructor_id', $instructor->id)
-            ->with(['subject', 'choices']);
+            ->with(['subject', 'choices', 'tags', 'instructor.user']);
 
         if ($request->filled('search')) {
             $query->where('question_text', 'like', "%{$request->search}%");
@@ -41,15 +46,15 @@ class QuestionBankController extends Controller
 
         $questions = $query->orderBy('created_at', 'desc')->paginate(20);
         
-        // Get subjects taught by this instructor
+        // Get subjects taught by this instructor (cache this if possible)
         $subjectIds = InstructorSubjectSection::where('instructor_id', $instructor->id)
             ->pluck('subject_id')
             ->unique();
         $subjects = Subject::whereIn('id', $subjectIds)->get();
 
         if ($request->has('ai_generate')) {
-        session()->flash('show_ai_modal', true);
-    }
+            session()->flash('show_ai_modal', true);
+        }
 
         return view('instructor.question-bank.index', compact('questions', 'subjects'));
     }
@@ -71,6 +76,10 @@ class QuestionBankController extends Controller
     public function store(Request $request)
     {
         $instructor = auth()->user()->instructor;
+        
+        if (!$instructor) {
+            abort(403, 'User is not an instructor.');
+        }
 
         $validated = $request->validate([
             'subject_id' => ['required', 'exists:subjects,id'],
@@ -181,7 +190,13 @@ class QuestionBankController extends Controller
 
     public function show(QuestionBank $questionBank)
     {
-        $this->authorize('view', $questionBank);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $questionBank->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to view this question.');
+        }
+        
         $questionBank->load(['subject.course', 'choices', 'quizzes']);
         
         return view('instructor.question-bank.show', compact('questionBank'));
@@ -189,9 +204,12 @@ class QuestionBankController extends Controller
 
     public function edit(QuestionBank $questionBank)
     {
-        $this->authorize('update', $questionBank);
+        $user = auth()->user();
+        $instructor = $user->instructor;
         
-        $instructor = auth()->user()->instructor;
+        if (!$instructor || $questionBank->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to edit this question.');
+        }
         
         $subjectIds = InstructorSubjectSection::where('instructor_id', $instructor->id)
             ->pluck('subject_id')
@@ -205,7 +223,12 @@ class QuestionBankController extends Controller
 
     public function update(Request $request, QuestionBank $questionBank)
     {
-        $this->authorize('update', $questionBank);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $questionBank->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to update this question.');
+        }
 
         $validated = $request->validate([
             'subject_id' => ['required', 'exists:subjects,id'],
@@ -315,7 +338,12 @@ class QuestionBankController extends Controller
 
     public function destroy(QuestionBank $questionBank)
     {
-        $this->authorize('delete', $questionBank);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $questionBank->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to delete this question.');
+        }
 
         try {
             // Check if question is used in any active quiz
@@ -336,7 +364,12 @@ class QuestionBankController extends Controller
 
     public function duplicate(QuestionBank $questionBank)
     {
-        $this->authorize('duplicate', $questionBank);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $questionBank->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to duplicate this question.');
+        }
 
         try {
             DB::beginTransaction();
@@ -367,7 +400,12 @@ class QuestionBankController extends Controller
 
     public function validateQuestion(QuestionBank $questionBank)
     {
-        $this->authorize('validate', $questionBank);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $questionBank->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to validate this question.');
+        }
 
         // TODO: Implement AI validation
         // Use OpenAI API to validate question quality
@@ -393,7 +431,12 @@ class QuestionBankController extends Controller
 
     public function analytics(QuestionBank $questionBank)
     {
-        $this->authorize('viewAnalytics', $questionBank);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $questionBank->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to view analytics for this question.');
+        }
 
         // TODO: Implement question analytics
         // - Times used
@@ -406,7 +449,12 @@ class QuestionBankController extends Controller
 
     public function preview(QuestionBank $questionBank)
     {
-        $this->authorize('view', $questionBank);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $questionBank->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to preview this question.');
+        }
         
         $questionBank->load('choices', 'subject');
         

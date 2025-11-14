@@ -58,7 +58,12 @@ class QuizController extends Controller
 
     public function create(Request $request)
     {
-        $instructor = auth()->user()->instructor;
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor) {
+            abort(403, 'User is not an instructor.');
+        }
         
         $subjectIds = InstructorSubjectSection::where('instructor_id', $instructor->id)
             ->pluck('subject_id')
@@ -78,7 +83,12 @@ class QuizController extends Controller
 
     public function store(Request $request)
     {
-        $instructor = auth()->user()->instructor;
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor) {
+            abort(403, 'User is not an instructor.');
+        }
 
         $validated = $request->validate([
             'subject_id' => ['required', 'exists:subjects,id'],
@@ -137,7 +147,13 @@ class QuizController extends Controller
 
     public function show(Quiz $quiz)
     {
-        $this->authorize('view', $quiz);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $quiz->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to view this quiz.');
+        }
+        
         $quiz->load(['subject.course', 'questions', 'attempts']);
         
         return view('instructor.quizzes.show', compact('quiz'));
@@ -145,9 +161,12 @@ class QuizController extends Controller
 
     public function edit(Quiz $quiz)
     {
-        $this->authorize('update', $quiz);
+        $user = auth()->user();
+        $instructor = $user->instructor;
         
-        $instructor = auth()->user()->instructor;
+        if (!$instructor || $quiz->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to edit this quiz.');
+        }
         
         $subjectIds = InstructorSubjectSection::where('instructor_id', $instructor->id)
             ->pluck('subject_id')
@@ -159,7 +178,12 @@ class QuizController extends Controller
 
     public function update(Request $request, Quiz $quiz)
     {
-        $this->authorize('update', $quiz);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $quiz->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to update this quiz.');
+        }
 
         $validated = $request->validate([
             'subject_id' => ['required', 'exists:subjects,id'],
@@ -206,7 +230,12 @@ class QuizController extends Controller
 
     public function destroy(Quiz $quiz)
     {
-        $this->authorize('delete', $quiz);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $quiz->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to delete this quiz.');
+        }
 
         try {
             if ($quiz->attempts()->where('status', 'completed')->count() > 0) {
@@ -226,7 +255,12 @@ class QuizController extends Controller
 
     public function togglePublish(Quiz $quiz)
     {
-        $this->authorize('publish', $quiz);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $quiz->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to toggle publish status for this quiz.');
+        }
         
         try {
             if (!$quiz->is_published && $quiz->questions()->count() === 0) {
@@ -291,11 +325,15 @@ class QuizController extends Controller
 
     public function manageQuestions(Quiz $quiz)
     {
-        $this->authorize('manageQuestions', $quiz);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $quiz->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to manage questions for this quiz.');
+        }
         
         $quiz->load(['questions.choices']);
         
-        $instructor = auth()->user()->instructor;
         $availableQuestions = QuestionBank::where('instructor_id', $instructor->id)
             ->where('subject_id', $quiz->subject_id)
             ->whereNotIn('id', $quiz->questions->pluck('id'))
@@ -307,7 +345,12 @@ class QuizController extends Controller
 
     public function addQuestion(Request $request, Quiz $quiz)
     {
-        $this->authorize('manageQuestions', $quiz);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $quiz->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to add questions to this quiz.');
+        }
 
         $validated = $request->validate([
             'question_id' => ['required', 'exists:question_bank,id'],
@@ -336,7 +379,12 @@ class QuizController extends Controller
 
     public function removeQuestion(Quiz $quiz, QuestionBank $question)
     {
-        $this->authorize('manageQuestions', $quiz);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $quiz->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to remove questions from this quiz.');
+        }
 
         try {
             $quiz->questions()->detach($question->id);
@@ -351,7 +399,12 @@ class QuizController extends Controller
 
     public function reorderQuestions(Request $request, Quiz $quiz)
     {
-        $this->authorize('manageQuestions', $quiz);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $quiz->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to reorder questions for this quiz.');
+        }
 
         $validated = $request->validate([
             'questions' => ['required', 'array'],
@@ -382,7 +435,12 @@ class QuizController extends Controller
 
     public function results(Quiz $quiz)
     {
-        $this->authorize('viewResults', $quiz);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $quiz->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to view results for this quiz.');
+        }
 
         $attempts = QuizAttempt::where('quiz_id', $quiz->id)
             ->with(['student.user'])
@@ -395,7 +453,12 @@ class QuizController extends Controller
 
     public function analytics(Quiz $quiz)
     {
-        $this->authorize('viewResults', $quiz);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $quiz->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to view analytics for this quiz.');
+        }
 
         // TODO: Implement comprehensive analytics
         
@@ -404,7 +467,12 @@ class QuizController extends Controller
 
     public function duplicate(Quiz $quiz)
     {
-        $this->authorize('view', $quiz);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $quiz->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to duplicate this quiz.');
+        }
 
         try {
             DB::beginTransaction();
@@ -436,7 +504,12 @@ class QuizController extends Controller
 
     public function bulkAddQuestions(Request $request, Quiz $quiz)
     {
-        $this->authorize('manageQuestions', $quiz);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $quiz->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to add questions to this quiz.');
+        }
         
         $validated = $request->validate([
             'question_ids' => ['required', 'array', 'min:1'],
@@ -501,7 +574,12 @@ class QuizController extends Controller
      */
     public function bulkRemoveQuestions(Request $request, Quiz $quiz)
     {
-        $this->authorize('manageQuestions', $quiz);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $quiz->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to remove questions from this quiz.');
+        }
         
         $validated = $request->validate([
             'question_ids' => ['required', 'array', 'min:1'],
@@ -543,7 +621,12 @@ class QuizController extends Controller
      */
     public function schedule(Request $request, Quiz $quiz)
     {
-        $this->authorize('update', $quiz);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $quiz->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to schedule this quiz.');
+        }
         
         $validated = $request->validate([
             'scheduled_publish_at' => ['nullable', 'date', 'after:now'],
@@ -582,7 +665,12 @@ class QuizController extends Controller
      */
     public function cancelSchedule(Quiz $quiz)
     {
-        $this->authorize('update', $quiz);
+        $user = auth()->user();
+        $instructor = $user->instructor;
+        
+        if (!$instructor || $quiz->instructor_id !== $instructor->id) {
+            abort(403, 'Unauthorized to cancel schedule for this quiz.');
+        }
         
         try {
             $quiz->update([

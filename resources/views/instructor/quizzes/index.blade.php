@@ -73,8 +73,8 @@
                                 {{ $quiz->is_published ? 'Published' : 'Draft' }}
                             </span>
 
-                            @if($lesson->isScheduledForPublish())
-                                <span class="badge badge-info ml-2" title="Scheduled for {{ $lesson->scheduled_publish_at->format('M d, Y h:i A') }}">
+                            @if($quiz->isScheduledForPublish())
+                                <span class="badge badge-info ml-2" title="Scheduled for {{ $quiz->scheduled_publish_at->format('M d, Y h:i A') }}">
                                     <i class="fas fa-clock"></i> Scheduled
                                 </span>
                             @endif
@@ -83,7 +83,7 @@
                         <td>{{ $quiz->time_limit }} min</td>
                         <td>{{ $quiz->updated_at->format('M d, Y') }}</td>
                         <td>
-                            <div class="btn-group btn-group-sm d-flex flex-wrap">
+                            <div class="btn-group btn-group-sm">
                                 <a href="{{ route('instructor.quizzes.show', $quiz) }}" class="btn btn-info" title="View">
                                     <i class="fas fa-eye"></i>
                                 </a>
@@ -93,37 +93,44 @@
                                 <a href="{{ route('instructor.quizzes.questions', $quiz) }}" class="btn btn-primary" title="Manage Questions">
                                     <i class="fas fa-tasks"></i>
                                 </a>
-                                <button type="button" 
-                                        class="btn btn-sm btn-info" 
-                                        data-toggle="modal" 
-                                        data-target="#scheduleModal{{ $lesson->id }}"
-                                        title="Schedule Publish">
-                                    <i class="fas fa-clock"></i>
-                                </button>
-                                <form action="{{ route('instructor.quizzes.toggle-publish', $quiz) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="btn btn-{{ $quiz->is_published ? 'secondary' : 'success' }}" 
-                                            title="{{ $quiz->is_published ? 'Unpublish' : 'Publish' }}">
-                                        <i class="fas fa-{{ $quiz->is_published ? 'eye-slash' : 'check' }}"></i>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        <i class="fas fa-ellipsis-v"></i>
                                     </button>
-                                </form>
-                                <a href="{{ route('instructor.quizzes.results', $quiz) }}" class="btn btn-info" title="View Results">
-                                    <i class="fas fa-chart-bar"></i>
-                                </a>
-                                <form action="{{ route('instructor.quizzes.duplicate', $quiz) }}" method="POST" class="d-inline">
-                                    @csrf
-                                    <button type="submit" class="btn btn-info" title="Duplicate">
-                                        <i class="fas fa-copy"></i>
-                                    </button>
-                                </form>
-                                <form action="{{ route('instructor.quizzes.destroy', $quiz) }}" method="POST" class="d-inline"
-                                      onsubmit="return confirm('Delete this quiz?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-danger" title="Delete">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
+                                    <div class="dropdown-menu dropdown-menu-right">
+                                        <a href="{{ route('instructor.quizzes.results', $quiz) }}" class="dropdown-item">
+                                            <i class="fas fa-chart-bar text-info"></i> View Results
+                                        </a>
+                                        <button type="button" 
+                                                class="dropdown-item" 
+                                                data-toggle="modal" 
+                                                data-target="#scheduleModal{{ $quiz->id }}">
+                                            <i class="fas fa-clock text-info"></i> Schedule
+                                        </button>
+                                        <form action="{{ route('instructor.quizzes.toggle-publish', $quiz) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="dropdown-item">
+                                                <i class="fas fa-{{ $quiz->is_published ? 'eye-slash' : 'check' }} text-{{ $quiz->is_published ? 'secondary' : 'success' }}"></i> 
+                                                {{ $quiz->is_published ? 'Unpublish' : 'Publish' }}
+                                            </button>
+                                        </form>
+                                        <form action="{{ route('instructor.quizzes.duplicate', $quiz) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="dropdown-item">
+                                                <i class="fas fa-copy text-info"></i> Duplicate
+                                            </button>
+                                        </form>
+                                        <div class="dropdown-divider"></div>
+                                        <form action="{{ route('instructor.quizzes.destroy', $quiz) }}" method="POST" class="d-inline"
+                                              onsubmit="return confirm('Delete this quiz?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="dropdown-item text-danger">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
                             </div>
                         </td>
                     </tr>

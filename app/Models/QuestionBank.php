@@ -130,7 +130,8 @@ class QuestionBank extends Model
 
     public function syncTags(array $tagIds): void
     {
-        $oldTagIds = $this->tags->pluck('id')->toArray();
+        // Use the relationship method to get old tag IDs
+        $oldTagIds = $this->tags()->pluck('id')->toArray();
         
         $this->tags()->sync($tagIds);
         
@@ -149,9 +150,15 @@ class QuestionBank extends Model
         return $this->tags()->where('slug', $slug)->exists();
     }
 
-    public function getTagsAttribute(): string
+    /**
+     * Get tags as a comma-separated string (accessor)
+     * Note: This conflicts with the relationship, so use $question->tags()->get() for collection
+     * or access the relationship directly when eager loaded
+     */
+    public function getTagsStringAttribute(): string
     {
-        return $this->tags->pluck('name')->join(', ');
+        // Use the relationship method to avoid undefined property error
+        return $this->tags()->pluck('name')->join(', ');
     }
 
 }

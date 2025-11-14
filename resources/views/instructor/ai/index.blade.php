@@ -321,13 +321,35 @@
 
 @push('scripts')
 <script>
-// Auto-refresh processing jobs
+// Auto-refresh processing jobs with smart polling
 let processingJobs = {{ $jobs->where('status', 'processing')->pluck('id')->toJson() }};
 
 if (processingJobs.length > 0) {
-    setInterval(() => {
-        location.reload();
-    }, 10000); // Refresh every 10 seconds
+    let refreshInterval = setInterval(() => {
+        let stillProcessing = false;
+        
+        // Poll each processing job
+        processingJobs.forEach(jobId => {
+            $.get(`/instructor/ai/job/${jobId}/status`, function(data) {
+                if (data.status === 'processing') {
+                    stillProcessing = true;
+                } else {
+                    // Job completed or failed, reload page
+                    clearInterval(refreshInterval);
+                    location.reload();
+                }
+            }).fail(function() {
+                // On error, reload page
+                clearInterval(refreshInterval);
+                location.reload();
+            });
+        });
+        
+        if (!stillProcessing) {
+            clearInterval(refreshInterval);
+            location.reload();
+        }
+    }, 5000); // Check every 5 seconds
 }
 </script>
 @endpush

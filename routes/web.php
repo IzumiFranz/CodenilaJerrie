@@ -289,6 +289,7 @@ Route::middleware(['auth', 'role:instructor', 'password.change'])
     
     // AI Dashboard & Management
     Route::prefix('ai')->name('ai.')->group(function () {
+        Route::get('/dashboard', [AIController::class, 'dashboard'])->name('dashboard');
         Route::get('/', [AIController::class, 'index'])->name('index');
         Route::get('/statistics', [AIController::class, 'statistics'])->name('statistics');
         Route::get('/{job}', [AIController::class, 'show'])->name('show');
@@ -297,6 +298,7 @@ Route::middleware(['auth', 'role:instructor', 'password.change'])
         Route::post('/generate-questions', [AIController::class, 'generateQuestions'])->name('generate-questions');
         Route::post('/validate-question/{question}', [AIController::class, 'validateQuestion'])->name('validate-question');
         Route::post('/analyze-quiz/{quiz}', [AIController::class, 'analyzeQuiz'])->name('analyze-quiz');
+        Route::get('/analyze-quiz/{quiz}', [AIController::class, 'analyzeQuiz'])->name('analyze-quiz.get');
         
         // Job Management
         Route::get('/job/{job}/status', [AIController::class, 'checkStatus'])->name('check-status');
@@ -338,6 +340,8 @@ Route::middleware(['auth', 'role:instructor', 'password.change'])
             ->name('attachments.reorder');
         Route::get('attachments/{attachment}/download', [InstructorLessonController::class, 'downloadAttachment'])
             ->name('attachments.download');
+        Route::get('attachments/{attachment}/view', [InstructorLessonController::class, 'viewAttachment'])
+            ->name('attachments.view');
     });
 
 

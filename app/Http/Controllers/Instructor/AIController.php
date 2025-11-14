@@ -15,11 +15,106 @@ use Illuminate\Support\Facades\DB;
 class AIController extends Controller
 {
     /**
+     * Display AI Assistant Dashboard
+     */
+    public function dashboard()
+    {
+        $user = auth()->user();
+        
+        if (!$user->isInstructor()) {
+            abort(403, 'Only instructors can access AI features.');
+        }
+
+        // Get recent jobs
+        $recentJobs = AIJob::where('user_id', $user->id)
+            ->with(['subject'])
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        // Calculate statistics
+        $stats = [
+            'total_generated' => AIJob::where('user_id', $user->id)
+                ->where('job_type', 'generate_questions')
+                ->where('status', 'completed')
+                ->count(),
+            'total_validated' => AIJob::where('user_id', $user->id)
+                ->where('job_type', 'validate_question')
+                ->where('status', 'completed')
+                ->count(),
+            'total_analyzed' => AIJob::where('user_id', $user->id)
+                ->where('job_type', 'analyze_quiz')
+                ->where('status', 'completed')
+                ->count(),
+            'monthly_jobs' => AIJob::where('user_id', $user->id)
+                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count(),
+            'monthly_generated' => AIJob::where('user_id', $user->id)
+                ->where('job_type', 'generate_questions')
+                ->where('status', 'completed')
+                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count(),
+            'avg_validation_score' => QuestionBank::where('instructor_id', $user->instructor->id)
+                ->where('is_validated', true)
+                ->whereNotNull('quality_score')
+                ->avg('quality_score') ?? 0,
+            'estimated_cost' => 0, // Can be calculated based on API usage
+            'avg_generation_time' => '45s',
+            'success_rate' => '98%',
+            'questions_per_hour' => '120',
+            'monthly_limit' => '500',
+        ];
+
+        // Chart data (last 4 weeks)
+        $chartData = [
+            'generated' => [],
+            'validated' => []
+        ];
+        
+        for ($i = 3; $i >= 0; $i--) {
+            $weekStart = now()->subWeeks($i)->startOfWeek();
+            $weekEnd = now()->subWeeks($i)->endOfWeek();
+            
+            $chartData['generated'][] = AIJob::where('user_id', $user->id)
+                ->where('job_type', 'generate_questions')
+                ->where('status', 'completed')
+                ->whereBetween('created_at', [$weekStart, $weekEnd])
+                ->count();
+            
+            $chartData['validated'][] = AIJob::where('user_id', $user->id)
+                ->where('job_type', 'validate_question')
+                ->where('status', 'completed')
+                ->whereBetween('created_at', [$weekStart, $weekEnd])
+                ->count();
+        }
+
+        // Check if there are processing jobs
+        $hasProcessingJobs = $recentJobs->where('status', 'processing')->isNotEmpty();
+
+        // Get subjects for the modal
+        $instructor = $user->instructor;
+        $subjectIds = \App\Models\InstructorSubjectSection::where('instructor_id', $instructor->id)
+            ->pluck('subject_id')
+            ->unique();
+        $subjects = \App\Models\Subject::whereIn('id', $subjectIds)->get();
+
+        return view('instructor.ai.dashboard', compact('stats', 'recentJobs', 'chartData', 'hasProcessingJobs', 'subjects'));
+    }
+
+    /**
      * Display AI job history
      */
     public function index(Request $request)
     {
-        $query = AIJob::where('user_id', auth()->id())
+        $user = auth()->user();
+        
+        if (!$user->isInstructor()) {
+            abort(403, 'Only instructors can access AI features.');
+        }
+        
+        $query = AIJob::where('user_id', $user->id)
             ->with(['subject']);
 
         // Filters
@@ -61,14 +156,31 @@ class AIController extends Controller
      */
     public function show(AIJob $job)
     {
+        $user = auth()->user();
+        
+        if (!$user->isInstructor() && !$user->isAdmin()) {
+            abort(403, 'Unauthorized to view this job');
+        }
+        
         // Check authorization
-        if ($job->user_id !== auth()->id() && !auth()->user()->isAdmin()) {
+        if ($job->user_id !== $user->id && !$user->isAdmin()) {
             abort(403, 'Unauthorized to view this job');
         }
 
         $job->load(['subject', 'user']);
 
-        return view('instructor.ai.show', compact('job'));
+        // Load generated questions if job is completed and has question IDs
+        $generatedQuestions = collect();
+        if ($job->status === 'completed' && 
+            $job->job_type === 'generate_questions' && 
+            isset($job->result['question_ids'])) {
+            $generatedQuestions = QuestionBank::whereIn('id', $job->result['question_ids'])
+                ->with(['choices', 'subject'])
+                ->orderBy('created_at', 'asc')
+                ->get();
+        }
+
+        return view('instructor.ai.show', compact('job', 'generatedQuestions'));
     }
 
     /**
@@ -76,6 +188,14 @@ class AIController extends Controller
      */
     public function generateQuestions(Request $request)
     {
+        // Authorization check
+        if (!auth()->user()->isInstructor()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only instructors can generate questions using AI.'
+            ], 403);
+        }
+
         $validated = $request->validate([
             'subject_id' => ['required', 'exists:subjects,id'],
             'lesson_ids' => ['required', 'array', 'min:1'],
@@ -136,6 +256,14 @@ class AIController extends Controller
      */
     public function validateQuestion(Request $request, QuestionBank $question)
     {
+        // Authorization checks
+        if (!auth()->user()->isInstructor()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only instructors can validate questions using AI.'
+            ], 403);
+        }
+
         // Check if instructor owns the question
         if ($question->instructor_id !== auth()->user()->instructor->id) {
             return response()->json([
@@ -183,6 +311,30 @@ class AIController extends Controller
      */
     public function analyzeQuiz(Request $request, Quiz $quiz)
     {
+        // Handle GET request - show confirmation or redirect
+        if ($request->isMethod('get')) {
+            $attemptsCount = $quiz->attempts()->where('status', 'completed')->count();
+            if ($attemptsCount < 5) {
+                return redirect()->route('instructor.quizzes.show', $quiz)
+                    ->with('error', 'This quiz needs at least 5 completed attempts for meaningful analysis.');
+            }
+            // For GET, just return JSON for AJAX
+            return response()->json([
+                'success' => true,
+                'message' => 'Ready to analyze',
+                'attempts_count' => $attemptsCount
+            ]);
+        }
+        
+        // Handle POST request - start analysis
+        // Authorization checks
+        if (!auth()->user()->isInstructor()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only instructors can analyze quizzes using AI.'
+            ], 403);
+        }
+
         // Check if instructor owns the quiz
         if ($quiz->instructor_id !== auth()->user()->instructor->id) {
             return response()->json([

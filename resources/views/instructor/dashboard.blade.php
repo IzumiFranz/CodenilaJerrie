@@ -267,10 +267,7 @@
                         <td>{{ $assignment->section->section_name }}</td>
                         <td>{{ $assignment->section->course->course_name }}</td>
                         <td>
-                            {{ \App\Models\Enrollment::where('section_id', $assignment->section_id)
-                                ->where('academic_year', $currentAcademicYear)
-                                ->where('semester', $currentSemester)
-                                ->where('status', 'enrolled')->count() }}
+                            {{ $enrollmentCounts[$assignment->id] ?? 0 }}
                         </td>
                         <td>
                             <a href="{{ route('instructor.lessons.create', ['subject' => $assignment->subject_id]) }}" 

@@ -42,8 +42,28 @@ class LessonController extends Controller
 
     public function show(Lesson $lesson)
     {
-        $lesson->load(['instructor.user', 'subject.course']);
-        return view('admin.lessons.show', compact('lesson'));
+        $lesson->load(['instructor.user', 'subject.course', 'attachments']);
+        
+        // Get assignments (sections with access) - moved from view
+        $assignments = collect();
+        if ($lesson->subject) {
+            $assignments = $lesson->subject->assignments()
+                ->with('section.course', 'instructor')
+                ->get();
+        }
+        
+        // Get related lessons - moved from view
+        $relatedLessons = collect();
+        if ($lesson->subject) {
+            $relatedLessons = $lesson->subject->lessons()
+                ->where('id', '!=', $lesson->id)
+                ->where('is_published', true)
+                ->orderBy('order')
+                ->limit(5)
+                ->get();
+        }
+        
+        return view('admin.lessons.show', compact('lesson', 'assignments', 'relatedLessons'));
     }
 
     public function destroy(Lesson $lesson)
