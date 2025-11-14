@@ -11,13 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('lessons', function (Blueprint $table) {
-            $table->timestamp('publish_at')->nullable()->after('published_at');
-        });
+        // Add publish_at to lessons if it doesn't exist
+        if (!Schema::hasColumn('lessons', 'publish_at')) {
+            Schema::table('lessons', function (Blueprint $table) {
+                $table->timestamp('publish_at')->nullable()->after('published_at');
+            });
+        }
 
-        Schema::table('quizzes', function (Blueprint $table) {
-            $table->timestamp('publish_at')->nullable()->after('published_at');
-        });
+        // Add publish_at to quizzes if it doesn't exist (may already exist from previous migration)
+        if (!Schema::hasColumn('quizzes', 'publish_at')) {
+            Schema::table('quizzes', function (Blueprint $table) {
+                $table->timestamp('publish_at')->nullable()->after('published_at');
+            });
+        }
     }
 
     /**
@@ -25,12 +31,17 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('lessons', function (Blueprint $table) {
-            $table->dropColumn('publish_at');
-        });
+        // Only drop if column exists
+        if (Schema::hasColumn('lessons', 'publish_at')) {
+            Schema::table('lessons', function (Blueprint $table) {
+                $table->dropColumn('publish_at');
+            });
+        }
 
-        Schema::table('quizzes', function (Blueprint $table) {
-            $table->dropColumn('publish_at');
-        });
+        if (Schema::hasColumn('quizzes', 'publish_at')) {
+            Schema::table('quizzes', function (Blueprint $table) {
+                $table->dropColumn('publish_at');
+            });
+        }
     }
 };
