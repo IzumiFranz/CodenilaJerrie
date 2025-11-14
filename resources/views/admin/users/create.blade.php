@@ -209,13 +209,15 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="student_number">Student Number <span class="text-danger">*</span></label>
-                                    <input type="text" name="student_number" id="student_number" 
-                                           class="form-control @error('student_number') is-invalid @enderror" 
-                                           value="{{ old('student_number') }}">
-                                    @error('student_number')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
+                                    <label for="student_number_display">Student Number</label>
+                                    <input type="text" 
+                                        id="student_number_display" 
+                                        class="form-control bg-light" 
+                                        value="Will be auto-generated (e.g., ST-2025-0001)" 
+                                        disabled>
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-magic mr-1"></i>Student number will be automatically generated
+                                    </small>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -236,6 +238,8 @@
                                 </div>
                             </div>
                         </div>
+
+
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
@@ -381,16 +385,50 @@ $(document).ready(function() {
         }
         
         if (role === 'student') {
-            let studentNumber = $('#student_number').val();
+            //let studentNumber = $('#student_number').val();
             let courseId = $('#course_id').val();
             let yearLevel = $('#year_level').val();
             
-            if (!studentNumber) {
+            /*if (!studentNumber) {
                 e.preventDefault();
                 alert('Student Number is required');
                 $('#student_number').focus();
                 return false;
-            }
+            }   
+               <div id="student-fields" style="display: none;">
+                        <h6 class="font-weight-bold text-info mb-3">Student Details</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="student_number">Student Number <span class="text-danger">*</span></label>
+                                    <input type="text" name="student_number" id="student_number" 
+                                           class="form-control @error('student_number') is-invalid @enderror" 
+                                           value="{{ old('student_number') }}">
+                                    @error('student_number')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="course_id">Course <span class="text-danger">*</span></label>
+                                    <select name="course_id" id="course_id" 
+                                            class="form-control @error('course_id') is-invalid @enderror">
+                                        <option value="">-- Select Course --</option>
+                                        @foreach($courses as $course)
+                                            <option value="{{ $course->id }}" {{ old('course_id') == $course->id ? 'selected' : '' }}>
+                                                {{ $course->course_name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('course_id')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+
+            */
             
             if (!courseId) {
                 e.preventDefault();

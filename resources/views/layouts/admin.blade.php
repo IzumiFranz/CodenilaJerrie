@@ -429,42 +429,173 @@
 <!-- Scroll to Top -->
 <a class="scroll-to-top rounded" href="#page-top"><i class="fas fa-angle-up"></i></a>
 
-<!-- Logout Modal -->
-<div class="modal fade" id="logoutModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Ready to Leave?</h5>
-                <button class="close" type="button" data-dismiss="modal"><span>&times;</span></button>
+<!-- Professional Logout Modal -->
+<div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="logoutModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow-lg">
+            <!-- Modal Header -->
+            <div class="modal-header border-0 bg-gradient-primary text-white">
+                <div class="d-flex align-items-center">
+                    <div class="icon-circle bg-white text-primary mr-3">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title mb-0" id="logoutModalLabel">Confirm Logout</h5>
+                        <small class="text-white-50">End your current session</small>
+                    </div>
+                </div>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
-            <div class="modal-body">Select "Logout" to end your session.</div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-                <form method="POST" action="{{ route('logout') }}">
+            
+            <!-- Modal Body -->
+            <div class="modal-body py-4">
+                <div class="text-center mb-4">
+                    <div class="mb-3">
+                        <i class="fas fa-user-circle text-primary" style="font-size: 4rem; opacity: 0.3;"></i>
+                    </div>
+                    <h6 class="font-weight-bold text-dark mb-2">{{ Auth::user()->full_name ?? Auth::user()->username }}</h6>
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-envelope mr-1"></i>{{ Auth::user()->email }}
+                    </p>
+                </div>
+                
+                <div class="alert alert-light border mb-0">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-info-circle text-info mt-1 mr-2"></i>
+                        <div>
+                            <p class="mb-2 font-weight-bold">Are you sure you want to log out?</p>
+                            <p class="mb-0 small text-muted">
+                                You will need to enter your credentials again to access your account.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="modal-footer border-0 bg-light">
+                <button type="button" class="btn btn-light px-4" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i>Cancel
+                </button>
+                <form method="POST" action="{{ route('logout') }}" class="m-0">
                     @csrf
-                    <button type="submit" class="btn btn-primary">Logout</button>
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="fas fa-sign-out-alt mr-1"></i>Logout
+                    </button>
                 </form>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Delete Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">Confirm Delete</h5>
-                <button class="close text-white" type="button" data-dismiss="modal"><span>&times;</span></button>
+<!-- Enhanced Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow-lg">
+            <!-- Modal Header -->
+            <div class="modal-header border-0 bg-danger text-white">
+                <div class="d-flex align-items-center">
+                    <div class="icon-circle bg-white text-danger mr-3">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title mb-0" id="deleteModalLabel">Confirm Deletion</h5>
+                        <small class="text-white-50">This action cannot be undone</small>
+                    </div>
+                </div>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
-            <div class="modal-body">Are you sure you want to delete this item?</div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
+            
+            <!-- Modal Body -->
+            <div class="modal-body py-4">
+                <div class="alert alert-danger border-danger mb-0">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-trash-alt mt-1 mr-3" style="font-size: 1.5rem;"></i>
+                        <div>
+                            <p class="mb-2 font-weight-bold">Are you sure you want to delete this item?</p>
+                            <p class="mb-0 small">
+                                This action is <strong>permanent</strong> and cannot be reversed. 
+                                All associated data will be permanently removed from the system.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="modal-footer border-0 bg-light">
+                <button type="button" class="btn btn-light px-4" data-dismiss="modal">
+                    <i class="fas fa-times mr-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-danger px-4" id="confirmDelete">
+                    <i class="fas fa-trash-alt mr-1"></i>Delete Permanently
+                </button>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+/* Modal Enhancements */
+.modal-content {
+    border-radius: 1rem;
+    overflow: hidden;
+}
+
+.modal-header {
+    padding: 1.5rem;
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+}
+
+.icon-circle {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+/* Smooth animations */
+.modal.fade .modal-dialog {
+    transform: scale(0.8);
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.modal.show .modal-dialog {
+    transform: scale(1);
+    opacity: 1;
+}
+
+/* Button hover effects */
+.modal-footer .btn {
+    transition: all 0.2s ease;
+}
+
+.modal-footer .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Alert styling */
+.alert-light {
+    background-color: #f8f9fc;
+    border-color: #e3e6f0;
+}
+</style>
 
 <!-- Scripts -->
 <script src="{{ asset('vendor/jquery/jquery.min.js') }}"></script>

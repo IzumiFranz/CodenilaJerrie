@@ -95,13 +95,11 @@ class UserController extends Controller
             'office' => ['nullable', 'string', 'max:255'],
             
             // Instructor fields
-            'employee_id' => ['required_if:role,instructor', 'nullable', 'string', 'unique:instructors,employee_id'],
             'specialization_id' => ['required_if:role,instructor', 'nullable', 'exists:specializations,id'],
             'department' => ['nullable', 'string', 'max:255'],
             'hire_date' => ['nullable', 'date'],
             
             // Student fields
-            'student_number' => ['required_if:role,student', 'nullable', 'string', 'unique:students,student_number'],
             'course_id' => ['required_if:role,student', 'nullable', 'exists:courses,id'],
             'year_level' => ['required_if:role,student', 'nullable', 'integer', 'min:1', 'max:6'],
             'address' => ['nullable', 'string', 'max:500'],

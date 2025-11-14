@@ -450,25 +450,181 @@
 <!-- Scroll to Top -->
 <a class="scroll-to-top rounded" href="#page-top"><i class="fas fa-angle-up"></i></a>
 
-<!-- Logout Modal -->
-<div class="modal fade" id="logoutModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Ready to Leave?</h5>
-                <button class="close" type="button" data-dismiss="modal"><span>&times;</span></button>
+<!-- Student Professional Logout Modal -->
+<div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="logoutModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow-lg">
+            <!-- Modal Header with Info/Blue theme -->
+            <div class="modal-header border-0 text-white" style="background: linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%);">
+                <div class="d-flex align-items-center">
+                    <div class="icon-circle bg-white mr-3" style="color: #4e73df;">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title mb-0" id="logoutModalLabel">End Study Session</h5>
+                        <small class="text-white-50">Logout from student portal</small>
+                    </div>
+                </div>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
-            <div class="modal-body">Select "Logout" to end your session.</div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-                <form method="POST" action="{{ route('logout') }}">
+            
+            <!-- Modal Body -->
+            <div class="modal-body py-4">
+                <div class="text-center mb-4">
+                    <div class="mb-3">
+                        @if(Auth::user()->profile_picture)
+                            <img src="{{ asset('storage/' . Auth::user()->profile_picture) }}" 
+                                 class="rounded-circle shadow" 
+                                 style="width: 80px; height: 80px; object-fit: cover; border: 3px solid #4e73df;" 
+                                 alt="Profile">
+                        @else
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center shadow" 
+                                 style="width: 80px; height: 80px; background: linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%); border: 3px solid #fff;">
+                                <span class="text-white" style="font-size: 2rem; font-weight: bold;">
+                                    {{ strtoupper(substr(Auth::user()->full_name ?? Auth::user()->username, 0, 1)) }}
+                                </span>
+                            </div>
+                        @endif
+                    </div>
+                    <h6 class="font-weight-bold text-dark mb-1">{{ Auth::user()->full_name ?? Auth::user()->username }}</h6>
+                    @if(Auth::user()->student)
+                        <p class="mb-1">
+                            <span class="badge badge-info">{{ Auth::user()->student->student_number }}</span>
+                        </p>
+                    @endif
+                    <p class="text-muted mb-0 small">
+                        <i class="fas fa-envelope mr-1"></i>{{ Auth::user()->email }}
+                    </p>
+                    @if(Auth::user()->student && Auth::user()->student->course)
+                        <p class="text-muted mb-0 small">
+                            <i class="fas fa-book mr-1"></i>{{ Auth::user()->student->course->course_name }}
+                        </p>
+                    @endif
+                </div>
+                
+                <div class="alert alert-info border-info" style="background-color: #e7f3ff;">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-lightbulb mt-1 mr-2"></i>
+                        <div class="small">
+                            <p class="mb-2 font-weight-bold text-dark">Before you go:</p>
+                            <ul class="mb-0 pl-3 text-dark" style="opacity: 0.8;">
+                                <li>Make sure you've saved all your work</li>
+                                <li>Incomplete quizzes won't be saved</li>
+                                <li>Your progress in lessons is auto-saved</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <p class="text-muted small mb-0">
+                        <i class="far fa-clock mr-1"></i>
+                        Last login: {{ Auth::user()->last_login_at ? Auth::user()->last_login_at->diffForHumans() : 'First time' }}
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="modal-footer border-0 bg-light">
+                <button type="button" class="btn btn-light px-4" data-dismiss="modal">
+                    <i class="fas fa-arrow-left mr-1"></i>Continue Learning
+                </button>
+                <form method="POST" action="{{ route('logout') }}" class="m-0">
                     @csrf
-                    <button type="submit" class="btn btn-primary">Logout</button>
+                    <button type="submit" class="btn btn-info px-4">
+                        <i class="fas fa-sign-out-alt mr-1"></i>Logout
+                    </button>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+/* Modal Enhancements for Student Layout */
+.modal-content {
+    border-radius: 1rem;
+    overflow: hidden;
+}
+
+.modal-header {
+    padding: 1.5rem;
+}
+
+.modal-body {
+    padding: 2rem 1.5rem;
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+}
+
+.icon-circle {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+/* Smooth animations */
+.modal.fade .modal-dialog {
+    transform: scale(0.8);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modal.show .modal-dialog {
+    transform: scale(1);
+    opacity: 1;
+}
+
+/* Button hover effects */
+.modal-footer .btn {
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.modal-footer .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(78, 115, 223, 0.3);
+}
+
+.modal-footer .btn-light:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Badge styling */
+.badge-info {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Profile image enhanced */
+.rounded-circle.shadow {
+    box-shadow: 0 0.5rem 1.5rem rgba(78, 115, 223, 0.3) !important;
+}
+
+/* Alert custom styling */
+.alert-info {
+    border-left: 4px solid #36b9cc;
+}
+
+/* Pulse animation for icon */
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.modal-header .icon-circle {
+    animation: pulse 2s infinite;
+}
+</style>
 
 <!-- Scripts -->
 <script src="{{ asset('vendor/jquery/jquery.min.js') }}"></script>
