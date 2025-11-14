@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: quiz-lms-app
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/var/www/html
+      - ./storage:/var/www/html/storage
+      - ./bootstrap/cache:/var/www/html/bootstrap/cache
+    environment:
+      - APP_ENV=local
+    command: php artisan serve --host=0.0.0.0 --port=8000
+    networks:
+      - quiz-lms-network
+
+networks:
+  quiz-lms-network:
+    driver: bridge
+

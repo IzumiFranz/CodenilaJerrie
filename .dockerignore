@@ -2,10 +2,7 @@ node_modules
 npm-debug.log
 .git
 .gitignore
-.env
-.env.backup
-.env.production
-.env.local
+.env*
 storage/*.key
 vendor
 .phpunit.result.cache
@@ -30,4 +27,21 @@ public/hot
 public/storage
 .php_cs
 .php_cs.cache
-
+# Additional files to exclude for faster builds
+docs/
+*.docx
+docker-compose.yml
+Dockerfile
+.dockerignore
+render.yaml
+README.md
+AUDIT_REPORT.md
+COMPREHENSIVE_AUDIT_REPORT.md
+DEPLOYMENT.md
+INSTRUCTOR_ROLE_FIXES.md
+PORTABLE_PHP_SETUP.md
+VIEW_REVIEW_AND_IMPROVEMENTS.md
+WINDOWS_SETUP.md
+# Build artifacts
+public/build/manifest.json
+public/build/.vite

@@ -5,9 +5,9 @@ echo "=========================================="
 echo "Starting Laravel Application Setup"
 echo "=========================================="
 
-# Wait for database to be ready (with retries)
+# Wait for database to be ready (reduced attempts for faster startup)
 echo "Waiting for database connection..."
-max_attempts=30
+max_attempts=10
 attempt=0
 while [ $attempt -lt $max_attempts ]; do
     if php -r "try { \$pdo = new PDO('pgsql:host='.getenv('DB_HOST').';port='.getenv('DB_PORT').';dbname='.getenv('DB_DATABASE'), getenv('DB_USERNAME'), getenv('DB_PASSWORD')); echo 'OK'; } catch (Exception \$e) { exit(1); }" 2>/dev/null; then
@@ -31,37 +31,30 @@ php artisan cache:clear 2>/dev/null || true
 php artisan route:clear 2>/dev/null || true
 php artisan view:clear 2>/dev/null || true
 
-# Run migrations (with error handling)
+# Run migrations (Laravel's migrate is idempotent - only runs pending migrations)
 echo "Running database migrations..."
 php artisan migrate --force
 
-# Always seed database (will skip if already seeded, but ensures users exist)
-echo "Seeding database..."
-echo "This will create default admin, instructor, and student accounts..."
-php artisan db:seed --class=DatabaseSeeder --force
-
-# Verify admin user exists
-echo "Verifying admin user was created..."
-php -r "
+# Check if database needs seeding (only seed if admin user doesn't exist)
+echo "Checking if database needs seeding..."
+ADMIN_EXISTS=$(php -r "
 require 'vendor/autoload.php';
 \$app = require_once 'bootstrap/app.php';
 \$app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
-\$user = DB::table('users')->where('username', 'admin')->first();
-if (\$user) {
-    echo 'SUCCESS: Admin user exists (username: admin, email: ' . \$user->email . ')' . PHP_EOL;
-} else {
-    echo 'WARNING: Admin user not found! Seeding may have failed.' . PHP_EOL;
-    exit(1);
-}
-" || echo "Could not verify admin user (this is OK if migrations haven't run yet)"
+echo DB::table('users')->where('username', 'admin')->exists() ? '1' : '0';
+" 2>/dev/null || echo "0")
 
-# Create storage link (ignore if already exists)
-echo "Creating storage link..."
-if [ ! -L public/storage ]; then
-    php artisan storage:link 2>/dev/null && echo "Storage link created" || echo "Storage link creation skipped"
+if [ "$ADMIN_EXISTS" = "0" ]; then
+    echo "Seeding database..."
+    echo "This will create default admin, instructor, and student accounts..."
+    php artisan db:seed --class=DatabaseSeeder --force
 else
-    echo "Storage link already exists"
+    echo "Database already seeded, skipping..."
 fi
+
+# Create storage link (idempotent)
+echo "Creating storage link..."
+php artisan storage:link 2>/dev/null && echo "Storage link created" || echo "Storage link already exists or creation skipped"
 
 # Set proper permissions
 echo "Setting file permissions..."
@@ -86,4 +79,3 @@ echo "=========================================="
 
 # Start the server
 exec php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
-

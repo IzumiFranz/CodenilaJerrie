@@ -8,6 +8,12 @@ services:
     startCommand: /start.sh
     healthCheckPath: /
     envVars:
+      - key: COMPOSER_NO_INTERACTION
+        value: "1"
+      - key: COMPOSER_CACHE_DIR
+        value: /tmp/composer-cache
+      - key: NPM_CONFIG_CACHE
+        value: /tmp/npm-cache
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
