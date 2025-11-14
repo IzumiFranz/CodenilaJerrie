@@ -33,10 +33,7 @@ services:
           name: quiz-lms-db
           property: port
       - key: DB_DATABASE
-        fromService:
-          type: pserv
-          name: quiz-lms-db
-          property: database
+        value: quizlms
       - key: DB_USERNAME
         fromService:
           type: pserv
