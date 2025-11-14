@@ -54,8 +54,9 @@ RUN echo "memory_limit=256M" > /usr/local/etc/php/conf.d/memory.ini \
 # Expose port (default 8000, but Render will use $PORT)
 EXPOSE 8000
 
-# Create startup script to clear cache and start server
-RUN echo '#!/bin/sh\nphp artisan config:clear\nphp artisan cache:clear\nphp artisan serve --host=0.0.0.0 --port=${PORT:-8000}' > /start.sh && chmod +x /start.sh
+# Copy and set up startup script
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
 
 # Default command (can be overridden by startCommand in render.yaml)
 # For web: php artisan serve --host=0.0.0.0 --port=$PORT
