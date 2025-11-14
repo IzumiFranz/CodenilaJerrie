@@ -14,12 +14,20 @@ class QuizAttemptSeeder extends Seeder
         
         // Create quiz attempts for Quiz 1 (CS101)
         foreach ($students->take(10) as $index => $student) {
-            $totalPoints = 3.00;
-            $earnedPoints = rand(150, 280) / 100; // Random score between 1.5 and 2.8
-            $percentage = ($earnedPoints / $totalPoints) * 100;
-            $status = 'completed';
+            // Only create if attempt doesn't exist
+            $existingAttempt = DB::table('quiz_attempts')
+                ->where('quiz_id', 1)
+                ->where('student_id', $student->id)
+                ->where('attempt_number', 1)
+                ->first();
             
-            $attemptId = DB::table('quiz_attempts')->insertGetId([
+            if (!$existingAttempt) {
+                $totalPoints = 3.00;
+                $earnedPoints = rand(150, 280) / 100; // Random score between 1.5 and 2.8
+                $percentage = ($earnedPoints / $totalPoints) * 100;
+                $status = 'completed';
+                
+                $attemptId = DB::table('quiz_attempts')->insertGetId([
                 'quiz_id' => 1,
                 'student_id' => $student->id,
                 'attempt_number' => 1,
@@ -36,45 +44,60 @@ class QuizAttemptSeeder extends Seeder
                 'updated_at' => now()->subDays(4),
             ]);
             
-            // Create answers for this attempt
-            $questions = [1, 2, 3];
-            foreach ($questions as $questionId) {
-                // Get correct choice for this question
-                $correctChoice = DB::table('choices')
-                    ->where('question_id', $questionId)
-                    ->where('is_correct', true)
-                    ->first();
-                
-                // Get all choices
-                $allChoices = DB::table('choices')
-                    ->where('question_id', $questionId)
-                    ->pluck('id')
-                    ->toArray();
-                
-                // Randomly decide if answer is correct (70% chance)
-                $isCorrect = rand(1, 100) <= 70;
-                $choiceId = $isCorrect ? $correctChoice->id : $allChoices[array_rand($allChoices)];
-                $pointsEarned = $isCorrect ? 1.00 : 0.00;
-                
-                DB::table('quiz_answers')->insert([
-                    'attempt_id' => $attemptId,
-                    'question_id' => $questionId,
-                    'choice_id' => $choiceId,
-                    'is_correct' => $isCorrect,
-                    'points_earned' => $pointsEarned,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                // Create answers for this attempt
+                $questions = [1, 2, 3];
+                foreach ($questions as $questionId) {
+                    // Only create if answer doesn't exist
+                    if (!DB::table('quiz_answers')
+                        ->where('attempt_id', $attemptId)
+                        ->where('question_id', $questionId)
+                        ->exists()) {
+                        // Get correct choice for this question
+                        $correctChoice = DB::table('choices')
+                            ->where('question_id', $questionId)
+                            ->where('is_correct', true)
+                            ->first();
+                        
+                        // Get all choices
+                        $allChoices = DB::table('choices')
+                            ->where('question_id', $questionId)
+                            ->pluck('id')
+                            ->toArray();
+                        
+                        // Randomly decide if answer is correct (70% chance)
+                        $isCorrect = rand(1, 100) <= 70;
+                        $choiceId = $isCorrect ? $correctChoice->id : $allChoices[array_rand($allChoices)];
+                        $pointsEarned = $isCorrect ? 1.00 : 0.00;
+                        
+                        DB::table('quiz_answers')->insert([
+                            'attempt_id' => $attemptId,
+                            'question_id' => $questionId,
+                            'choice_id' => $choiceId,
+                            'is_correct' => $isCorrect,
+                            'points_earned' => $pointsEarned,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
             }
         }
         
         // Create quiz attempts for Quiz 2 (CS102 - Programming)
         foreach ($students->skip(5)->take(8) as $index => $student) {
-            $totalPoints = 3.00;
-            $earnedPoints = rand(180, 300) / 100;
-            $percentage = ($earnedPoints / $totalPoints) * 100;
+            // Only create if attempt doesn't exist
+            $existingAttempt = DB::table('quiz_attempts')
+                ->where('quiz_id', 2)
+                ->where('student_id', $student->id)
+                ->where('attempt_number', 1)
+                ->first();
             
-            $attemptId = DB::table('quiz_attempts')->insertGetId([
+            if (!$existingAttempt) {
+                $totalPoints = 3.00;
+                $earnedPoints = rand(180, 300) / 100;
+                $percentage = ($earnedPoints / $totalPoints) * 100;
+                
+                $attemptId = DB::table('quiz_attempts')->insertGetId([
                 'quiz_id' => 2,
                 'student_id' => $student->id,
                 'attempt_number' => 1,
@@ -91,38 +114,51 @@ class QuizAttemptSeeder extends Seeder
                 'updated_at' => now()->subDays(2),
             ]);
             
-            // Create answers
-            $questions = [4, 5, 6];
-            foreach ($questions as $questionId) {
-                $correctChoice = DB::table('choices')
-                    ->where('question_id', $questionId)
-                    ->where('is_correct', true)
-                    ->first();
-                
-                $allChoices = DB::table('choices')
-                    ->where('question_id', $questionId)
-                    ->pluck('id')
-                    ->toArray();
-                
-                $isCorrect = rand(1, 100) <= 75;
-                $choiceId = $isCorrect ? $correctChoice->id : $allChoices[array_rand($allChoices)];
-                $pointsEarned = $isCorrect ? 1.00 : 0.00;
-                
-                DB::table('quiz_answers')->insert([
-                    'attempt_id' => $attemptId,
-                    'question_id' => $questionId,
-                    'choice_id' => $choiceId,
-                    'is_correct' => $isCorrect,
-                    'points_earned' => $pointsEarned,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                // Create answers
+                $questions = [4, 5, 6];
+                foreach ($questions as $questionId) {
+                    // Only create if answer doesn't exist
+                    if (!DB::table('quiz_answers')
+                        ->where('attempt_id', $attemptId)
+                        ->where('question_id', $questionId)
+                        ->exists()) {
+                        $correctChoice = DB::table('choices')
+                            ->where('question_id', $questionId)
+                            ->where('is_correct', true)
+                            ->first();
+                        
+                        $allChoices = DB::table('choices')
+                            ->where('question_id', $questionId)
+                            ->pluck('id')
+                            ->toArray();
+                        
+                        $isCorrect = rand(1, 100) <= 75;
+                        $choiceId = $isCorrect ? $correctChoice->id : $allChoices[array_rand($allChoices)];
+                        $pointsEarned = $isCorrect ? 1.00 : 0.00;
+                        
+                        DB::table('quiz_answers')->insert([
+                            'attempt_id' => $attemptId,
+                            'question_id' => $questionId,
+                            'choice_id' => $choiceId,
+                            'is_correct' => $isCorrect,
+                            'points_earned' => $pointsEarned,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
             }
         }
         
         // Create some in-progress attempts
         foreach ($students->take(3) as $student) {
-            DB::table('quiz_attempts')->insert([
+            // Only create if attempt doesn't exist
+            if (!DB::table('quiz_attempts')
+                ->where('quiz_id', 3)
+                ->where('student_id', $student->id)
+                ->where('status', 'in_progress')
+                ->exists()) {
+                DB::table('quiz_attempts')->insert([
                 'quiz_id' => 3,
                 'student_id' => $student->id,
                 'attempt_number' => 1,
@@ -134,10 +170,11 @@ class QuizAttemptSeeder extends Seeder
                 'completed_at' => null,
                 'time_spent' => null,
                 'question_order' => json_encode([7, 8]),
-                'ip_address' => '192.168.1.' . rand(1, 254),
-                'created_at' => now()->subMinutes(rand(5, 30)),
-                'updated_at' => now()->subMinutes(rand(5, 30)),
-            ]);
+                    'ip_address' => '192.168.1.' . rand(1, 254),
+                    'created_at' => now()->subMinutes(rand(5, 30)),
+                    'updated_at' => now()->subMinutes(rand(5, 30)),
+                ]);
+            }
         }
     }
 }

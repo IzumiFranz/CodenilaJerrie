@@ -120,10 +120,17 @@ class LessonSeeder extends Seeder
         ];
 
         foreach ($lessons as $lesson) {
-            DB::table('lessons')->insert(array_merge($lesson, [
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]));
+            // Only create if lesson with same title and instructor doesn't exist
+            if (!DB::table('lessons')
+                ->where('instructor_id', $lesson['instructor_id'])
+                ->where('subject_id', $lesson['subject_id'])
+                ->where('title', $lesson['title'])
+                ->exists()) {
+                DB::table('lessons')->insert(array_merge($lesson, [
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]));
+            }
         }
     }
 }

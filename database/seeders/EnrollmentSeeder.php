@@ -23,16 +23,24 @@ class EnrollmentSeeder extends Seeder
                 // Randomly assign to a section
                 $section = $sections->random();
                 
-                DB::table('enrollments')->insert([
-                    'student_id' => $student->id,
-                    'section_id' => $section->id,
-                    'academic_year' => '2024-2025',
-                    'semester' => '1st',
-                    'status' => 'enrolled',
-                    'enrollment_date' => now()->subDays(rand(1, 30)),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                // Only create if enrollment doesn't exist
+                if (!DB::table('enrollments')
+                    ->where('student_id', $student->id)
+                    ->where('section_id', $section->id)
+                    ->where('academic_year', '2024-2025')
+                    ->where('semester', '1st')
+                    ->exists()) {
+                    DB::table('enrollments')->insert([
+                        'student_id' => $student->id,
+                        'section_id' => $section->id,
+                        'academic_year' => '2024-2025',
+                        'semester' => '1st',
+                        'status' => 'enrolled',
+                        'enrollment_date' => now()->subDays(rand(1, 30)),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
             }
         }
     }
@@ -55,12 +63,21 @@ class InstructorSubjectSectionSeeder extends Seeder
         ];
 
         foreach ($assignments as $assignment) {
-            DB::table('instructor_subject_section')->insert(array_merge($assignment, [
-                'academic_year' => '2024-2025',
-                'semester' => '1st',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]));
+            // Only create if assignment doesn't exist
+            if (!DB::table('instructor_subject_section')
+                ->where('instructor_id', $assignment['instructor_id'])
+                ->where('subject_id', $assignment['subject_id'])
+                ->where('section_id', $assignment['section_id'])
+                ->where('academic_year', '2024-2025')
+                ->where('semester', '1st')
+                ->exists()) {
+                DB::table('instructor_subject_section')->insert(array_merge($assignment, [
+                    'academic_year' => '2024-2025',
+                    'semester' => '1st',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]));
+            }
         }
     }
 }

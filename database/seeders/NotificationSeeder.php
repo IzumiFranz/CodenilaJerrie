@@ -53,16 +53,25 @@ class NotificationSeeder extends Seeder
                 $notif = $notificationTypes[array_rand($notificationTypes)];
                 $isRead = rand(1, 100) <= 40; // 40% chance notification is read
                 
-                DB::table('notifications')->insert([
-                    'user_id' => $userId,
-                    'type' => $notif['type'],
-                    'title' => $notif['title'],
-                    'message' => $notif['message'],
-                    'action_url' => $notif['action_url'],
-                    'read_at' => $isRead ? now()->subDays(rand(1, 5)) : null,
-                    'created_at' => now()->subDays(rand(1, 10)),
-                    'updated_at' => now()->subDays(rand(1, 10)),
-                ]);
+                // Only create if similar notification doesn't exist (to avoid exact duplicates)
+                // Allow some duplicates for realistic scenario, but limit per user
+                $existingCount = DB::table('notifications')
+                    ->where('user_id', $userId)
+                    ->where('title', $notif['title'])
+                    ->count();
+                
+                if ($existingCount < 2) { // Allow max 2 of same type per user
+                    DB::table('notifications')->insert([
+                        'user_id' => $userId,
+                        'type' => $notif['type'],
+                        'title' => $notif['title'],
+                        'message' => $notif['message'],
+                        'action_url' => $notif['action_url'],
+                        'read_at' => $isRead ? now()->subDays(rand(1, 5)) : null,
+                        'created_at' => now()->subDays(rand(1, 10)),
+                        'updated_at' => now()->subDays(rand(1, 10)),
+                    ]);
+                }
             }
         }
     }
@@ -120,22 +129,29 @@ class FeedbackSeeder extends Seeder
         
         foreach ($students->take(10) as $index => $student) {
             $feedback = $feedbackData[$index % count($feedbackData)];
-            $isAnonymous = rand(1, 100) <= 20; // 20% anonymous
             
-            $feedbackId = DB::table('feedbacks')->insertGetId([
-                'user_id' => $student->id,
-                'type' => $feedback['type'],
-                'subject' => $feedback['subject'],
-                'message' => $feedback['message'],
-                'rating' => $feedback['rating'],
-                'status' => $feedback['status'],
-                'is_anonymous' => $isAnonymous,
-                'response' => $feedback['response'],
-                'response_by_id' => $feedback['response'] ? rand(2, 6) : null, // Random instructor
-                'responded_at' => $feedback['response'] ? now()->subDays(rand(1, 3)) : null,
-                'created_at' => now()->subDays(rand(1, 15)),
-                'updated_at' => now()->subDays(rand(1, 15)),
-            ]);
+            // Only create if feedback with same subject from this user doesn't exist
+            if (!DB::table('feedbacks')
+                ->where('user_id', $student->id)
+                ->where('subject', $feedback['subject'])
+                ->exists()) {
+                $isAnonymous = rand(1, 100) <= 20; // 20% anonymous
+                
+                $feedbackId = DB::table('feedbacks')->insertGetId([
+                    'user_id' => $student->id,
+                    'type' => $feedback['type'],
+                    'subject' => $feedback['subject'],
+                    'message' => $feedback['message'],
+                    'rating' => $feedback['rating'],
+                    'status' => $feedback['status'],
+                    'is_anonymous' => $isAnonymous,
+                    'response' => $feedback['response'],
+                    'response_by_id' => $feedback['response'] ? rand(2, 6) : null, // Random instructor
+                    'responded_at' => $feedback['response'] ? now()->subDays(rand(1, 3)) : null,
+                    'created_at' => now()->subDays(rand(1, 15)),
+                    'updated_at' => now()->subDays(rand(1, 15)),
+                ]);
+            }
         }
     }
 }

@@ -93,20 +93,35 @@ class QuizSeeder extends Seeder
             $questionIds = $quizData['question_ids'];
             unset($quizData['question_ids']);
             
-            $quizId = DB::table('quizzes')->insertGetId(array_merge($quizData, [
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]));
+            // Only create if quiz with same title and instructor doesn't exist
+            $existingQuiz = DB::table('quizzes')
+                ->where('instructor_id', $quizData['instructor_id'])
+                ->where('subject_id', $quizData['subject_id'])
+                ->where('title', $quizData['title'])
+                ->first();
             
-            // Link questions to quiz
-            foreach ($questionIds as $index => $questionId) {
-                DB::table('quiz_question')->insert([
-                    'quiz_id' => $quizId,
-                    'question_bank_id' => $questionId,
-                    'order' => $index + 1,
+            if (!$existingQuiz) {
+                $quizId = DB::table('quizzes')->insertGetId(array_merge($quizData, [
                     'created_at' => now(),
                     'updated_at' => now(),
-                ]);
+                ]));
+                
+                // Link questions to quiz
+                foreach ($questionIds as $index => $questionId) {
+                    // Only link if not already linked
+                    if (!DB::table('quiz_question')
+                        ->where('quiz_id', $quizId)
+                        ->where('question_bank_id', $questionId)
+                        ->exists()) {
+                        DB::table('quiz_question')->insert([
+                            'quiz_id' => $quizId,
+                            'question_bank_id' => $questionId,
+                            'order' => $index + 1,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
             }
         }
     }

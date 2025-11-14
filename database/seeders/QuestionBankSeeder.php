@@ -153,23 +153,38 @@ class QuestionBankSeeder extends Seeder
             $choices = $questionData['choices'];
             unset($questionData['choices']);
             
-            $questionId = DB::table('question_bank')->insertGetId(array_merge($questionData, [
-                'usage_count' => 0,
-                'quality_score' => rand(70, 100),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]));
+            // Only create if question with same text and instructor doesn't exist
+            $existingQuestion = DB::table('question_bank')
+                ->where('instructor_id', $questionData['instructor_id'])
+                ->where('subject_id', $questionData['subject_id'])
+                ->where('question_text', $questionData['question_text'])
+                ->first();
             
-            // Insert choices for this question
-            foreach ($choices as $index => $choice) {
-                DB::table('choices')->insert([
-                    'question_id' => $questionId,
-                    'choice_text' => $choice['text'],
-                    'is_correct' => $choice['is_correct'],
-                    'order' => $index,
+            if (!$existingQuestion) {
+                $questionId = DB::table('question_bank')->insertGetId(array_merge($questionData, [
+                    'usage_count' => 0,
+                    'quality_score' => rand(70, 100),
                     'created_at' => now(),
                     'updated_at' => now(),
-                ]);
+                ]));
+                
+                // Insert choices for this question
+                foreach ($choices as $index => $choice) {
+                    // Only create if choice doesn't exist
+                    if (!DB::table('choices')
+                        ->where('question_id', $questionId)
+                        ->where('choice_text', $choice['text'])
+                        ->exists()) {
+                        DB::table('choices')->insert([
+                            'question_id' => $questionId,
+                            'choice_text' => $choice['text'],
+                            'is_correct' => $choice['is_correct'],
+                            'order' => $index,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
             }
         }
     }
