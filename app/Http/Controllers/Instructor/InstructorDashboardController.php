@@ -79,23 +79,36 @@ class InstructorDashboardController extends Controller
         $classAverage = $averageScore;
 
         // --- Highlights ---
+        // Fix for PostgreSQL: Use subquery instead of withAvg alias
         $hardestQuiz = Quiz::where('instructor_id', $instructor->id)
-            ->withAvg(['attempts as avg_score' => fn($q) => $q->where('status', 'completed')], 'percentage')
-            ->orderBy('avg_score')
+            ->select('quizzes.*')
+            ->selectRaw('(
+                SELECT AVG(percentage) 
+                FROM quiz_attempts 
+                WHERE quiz_attempts.quiz_id = quizzes.id 
+                AND quiz_attempts.status = \'completed\'
+            ) as avg_score')
+            ->orderByRaw('avg_score ASC')
             ->first();
 
         $popularLesson = Lesson::where('instructor_id', $instructor->id)
             ->orderBy('view_count', 'desc')
             ->first();
 
+        // Fix for PostgreSQL: Use subquery instead of HAVING with alias
         $strugglingStudents = Student::whereHas('enrollments', function ($q) use ($assignments) {
                 $q->whereIn('section_id', $assignments->pluck('section_id'));
             })
-            ->withAvg(['quizAttempts as avg_score' => function ($q) use ($quizIds) {
-                $q->whereIn('quiz_id', $quizIds)->where('status', 'completed');
-            }], 'percentage')
-            ->having('avg_score', '<', 50)
-            ->orderBy('avg_score', 'asc')
+            ->select('students.*')
+            ->selectRaw('(
+                SELECT AVG(percentage) 
+                FROM quiz_attempts 
+                WHERE quiz_attempts.student_id = students.id 
+                AND quiz_attempts.quiz_id IN (' . $quizIds->implode(',') . ')
+                AND quiz_attempts.status = \'completed\'
+            ) as avg_score')
+            ->havingRaw('avg_score < 50')
+            ->orderByRaw('avg_score ASC')
             ->limit(5)
             ->get();
 
