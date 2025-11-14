@@ -44,8 +44,8 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Bulk actions initialized');
     }
 
-    // Auto-submit filters
-    document.querySelectorAll('select[name="role"], select[name="status"]').forEach(function(el){
+    // Auto-submit filters (but NOT for bulk upload form)
+    document.querySelectorAll('select[name="role"]:not(#bulk_role), select[name="status"]').forEach(function(el){
         el.addEventListener('change', function(){
             this.closest('form').submit();
         });
@@ -53,34 +53,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // jQuery code
     $(function() {
-        // Update custom file input label
-        $('#csv_file').on('change', function() {
-            let fileName = $(this).val().split('\\').pop();
-            $(this).next('.custom-file-label').html(fileName);
-        });
-
         // Auto-hide alerts after 5 seconds
         setTimeout(function() {
             $('.alert-dismissible').fadeOut('slow');
         }, 5000);
 
-        // Form validation
-        $('form').on('submit', function(e) {
-            let csvFile = $('#csv_file').val();
-            let role = $('#bulk_role').val();
-
-            if (!csvFile) {
-                e.preventDefault();
-                alert('Please select a CSV file to upload');
-                return false;
-            }
-
-            if (!role) {
-                e.preventDefault();
-                alert('Please select a role');
-                return false;
-            }
-        });
+        // Reopen modal if validation errors exist
+        @if($errors->has('csv_file') || $errors->has('role'))
+            $('#bulkUploadModal').modal('show');
+            
+            // Pre-fill role if it was selected
+            @if(old('role'))
+                setTimeout(function() {
+                    $('#bulk_role').val('{{ old('role') }}').trigger('change');
+                }, 300);
+            @endif
+        @endif
     });
 });
 </script>

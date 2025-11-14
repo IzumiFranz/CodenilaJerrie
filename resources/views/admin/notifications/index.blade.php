@@ -2,14 +2,13 @@
 
 @section('title', 'Notifications Management')
 
-@php
-    $pageTitle = 'Notifications Management';
-    $pageActions = '<a href="' . route('admin.notifications.create') . '" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Send Notification
-    </a>';
-@endphp
-
 @section('content')
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-bell mr-2"></i>Notifications Management</h1>
+    <a href="{{ route('admin.notifications.create') }}" class="btn btn-primary btn-sm">
+        <i class="fas fa-plus mr-1"></i> Send Notification
+    </a>
+</div>
 <div class="card shadow mb-4">
     <div class="card-header py-3">
         <h6 class="m-0 font-weight-bold text-primary">Filter Notifications</h6>
@@ -28,6 +27,14 @@
                     <option value="success" {{ request('type') == 'success' ? 'selected' : '' }}>Success</option>
                     <option value="warning" {{ request('type') == 'warning' ? 'selected' : '' }}>Warning</option>
                     <option value="danger" {{ request('type') == 'danger' ? 'selected' : '' }}>Danger</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-control">
+                    <option value="">All Status</option>
+                    <option value="unread" {{ request('status') == 'unread' ? 'selected' : '' }}>Unread</option>
+                    <option value="read" {{ request('status') == 'read' ? 'selected' : '' }}>Read</option>
                 </select>
             </div>
             <div class="col-md-2">

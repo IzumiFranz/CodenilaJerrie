@@ -5,7 +5,7 @@
 @section('content')
 <div class="container-fluid px-4">
     <!-- Header & Back Button -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <div>
             <a href="{{ route('student.lessons.index') }}" class="btn btn-outline-secondary btn-sm mb-2">
                 <i class="fas fa-arrow-left mr-1"></i> Back to Lessons
@@ -46,12 +46,20 @@
             <div class="card shadow-sm mb-4 border-left-primary">
                 <div class="card-body">
                     <div class="d-flex align-items-center mb-3">
-                        <img src="{{ $lesson->instructor->avatar ?? 'https://ui-avatars.com/api/?name=' . urlencode($lesson->instructor->name) }}"
-                             alt="{{ $lesson->instructor->name }}"
-                             class="rounded-circle mr-3"
-                             width="50" height="50">
+                        @if($lesson->instructor->user && $lesson->instructor->user->profile_picture)
+                            <img src="{{ asset('storage/' . $lesson->instructor->user->profile_picture) }}" 
+                                 alt="{{ $lesson->instructor->full_name }}"
+                                 class="rounded-circle mr-3"
+                                 width="50" height="50"
+                                 style="object-fit: cover;">
+                        @else
+                            <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mr-3"
+                                 style="width: 50px; height: 50px; font-size: 1.2rem;">
+                                {{ strtoupper(substr($lesson->instructor->full_name, 0, 1)) }}
+                            </div>
+                        @endif
                         <div>
-                            <h6 class="mb-0">{{ $lesson->instructor->name }}</h6>
+                            <h6 class="mb-0">{{ $lesson->instructor->full_name }}</h6>
                             <small class="text-muted">Instructor</small>
                         </div>
                         <div class="ml-auto">
@@ -293,7 +301,7 @@ $(document).ready(function() {
     }
 
     $('#markCompletedBtn').click(function() {
-        if(confirm('Mark this lesson as completed?')) {
+        if(confirm('Mark this lesson as completed? This will record your completion and update your progress.')) {
             $.post('{{ route("student.lessons.mark-completed", $lesson) }}', {
                 _token: '{{ csrf_token() }}'
             }, function(response) {

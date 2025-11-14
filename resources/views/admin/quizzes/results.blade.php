@@ -2,18 +2,18 @@
 
 @section('title', 'Quiz Results')
 
-@php
-    $pageTitle = 'Quiz Results: ' . $quiz->title;
-    $pageActions = '
-        <a href="' . route('admin.quizzes.show', $quiz) . '" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Back to Quiz
-        </a>
-        <button type="button" class="btn btn-success" onclick="window.print()">
-            <i class="fas fa-print"></i> Print
-        </button>';
-@endphp
-
 @section('content')
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-chart-bar mr-2"></i>Quiz Results: {{ $quiz->title }}</h1>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-success btn-sm" onclick="window.print()">
+            <i class="fas fa-print mr-1"></i> Print
+        </button>
+        <a href="{{ route('admin.quizzes.show', $quiz) }}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left mr-1"></i> Back to Quiz
+        </a>
+    </div>
+</div>
 <!-- Overall Statistics -->
 <div class="row">
     <div class="col-xl-3 col-md-6 mb-4">

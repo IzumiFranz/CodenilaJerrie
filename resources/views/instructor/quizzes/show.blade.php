@@ -2,17 +2,17 @@
 @section('title', 'Quiz Details')
 @section('content')
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-clipboard-list mr-2"></i>Quiz Details</h1>
-    <div>
-        <a href="{{ route('instructor.quizzes.edit', $quiz) }}" class="btn btn-warning">
-            <i class="fas fa-edit"></i> Edit
+    <div class="d-flex gap-2">
+        <a href="{{ route('instructor.quizzes.edit', $quiz) }}" class="btn btn-warning btn-sm">
+            <i class="fas fa-edit mr-1"></i> Edit
         </a>
-        <a href="{{ route('instructor.quizzes.questions', $quiz) }}" class="btn btn-primary">
-            <i class="fas fa-tasks"></i> Manage Questions
+        <a href="{{ route('instructor.quizzes.questions', $quiz) }}" class="btn btn-primary btn-sm">
+            <i class="fas fa-tasks mr-1"></i> Manage Questions
         </a>
-        <a href="{{ route('instructor.quizzes.index') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Back
+        <a href="{{ route('instructor.quizzes.index') }}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left mr-1"></i> Back
         </a>
     </div>
 </div>

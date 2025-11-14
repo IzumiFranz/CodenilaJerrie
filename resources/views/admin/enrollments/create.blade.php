@@ -2,11 +2,13 @@
 
 @section('title', 'Enroll Student')
 
-@php
-    $pageTitle = 'Enroll New Student';
-    $pageActions = '<a href="' . route('admin.enrollments.index') . '" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Back to List</a>';
-@endphp
 @section('content')
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-user-plus mr-2"></i>Enroll New Student</h1>
+    <a href="{{ route('admin.enrollments.index') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left mr-1"></i> Back to List
+    </a>
+</div>
     <div class="row justify-content-center">
         <div class="col-lg-10">
             @livewire('enrollment-form')
@@ -17,20 +19,7 @@
 @push('scripts')
 <script>
     $(document).ready(function() {
-        const sections = @json($courses->flatMap(function($course) {
-            return $course->sections->map(function($section) use ($course) {
-                return [
-                    'id' => $section->id,
-                    'course_id' => $course->id,
-                    'course_code' => $course->course_code,
-                    'year_level' => $section->year_level,
-                    'section_name' => $section->section_name,
-                    'max_students' => $section->max_students,
-                    'full_name' => $section->full_name,
-                    'is_active' => $section->is_active
-                ];
-            });
-        }));
+        const sections = @json($sectionsData);
 
         // Show student info when selected
         $('#student_id').on('change', function() {

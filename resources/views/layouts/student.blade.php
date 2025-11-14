@@ -251,7 +251,7 @@
                 <i class="fas fa-fw fa-bell"></i>
                 <span>Notifications</span>
                 @php
-                    $unreadCount = Auth::check() && Auth::user()->notifications ? Auth::user()->notifications()->where('read_at', false)->count() : 0;
+                    $unreadCount = Auth::check() && Auth::user()->notifications ? Auth::user()->notifications()->whereNull('read_at')->count() : 0;
                 @endphp
                 @if($unreadCount > 0)
                     <span class="badge badge-danger badge-counter ml-1">{{ $unreadCount }}</span>
@@ -295,7 +295,7 @@
 
             <ul class="navbar-nav ml-auto">
                 @php
-                    $unreadCount = Auth::check() && Auth::user()->notifications ? Auth::user()->notifications()->where('read_at', false)->count() : 0;
+                    $unreadCount = Auth::check() && Auth::user()->notifications ? Auth::user()->notifications()->whereNull('read_at')->count() : 0;
                     $recentNotifications = Auth::check() && Auth::user()->notifications ? Auth::user()->notifications()->orderBy('created_at', 'desc')->limit(5)->get() : collect();
                 @endphp
 

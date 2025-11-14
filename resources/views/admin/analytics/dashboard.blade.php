@@ -2,18 +2,18 @@
 
 @section('title', 'Analytics Dashboard')
 
-@php
-    $pageTitle = 'Analytics Dashboard';
-    $pageActions = '
-        <button onclick="window.print()" class="btn btn-secondary">
-            <i class="fas fa-print"></i> Print Report
-        </button>
-        <a href="' . route('admin.export.analytics-report') . '?academic_year=' . $academicYear . '&semester=' . $semester . '" class="btn btn-success">
-            <i class="fas fa-download"></i> Export CSV
-        </a>';
-@endphp
-
 @section('content')
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-chart-line mr-2"></i>Analytics Dashboard</h1>
+    <div class="d-flex gap-2">
+        <a href="{{ route('admin.export.analytics-report') }}?academic_year={{ $academicYear }}&semester={{ $semester }}" class="btn btn-success btn-sm">
+            <i class="fas fa-download mr-1"></i> Export CSV
+        </a>
+        <button onclick="window.print()" class="btn btn-secondary btn-sm">
+            <i class="fas fa-print mr-1"></i> Print Report
+        </button>
+    </div>
+</div>
 <!-- Filters -->
 <div class="card shadow mb-4 no-print">
     <div class="card-header py-3">

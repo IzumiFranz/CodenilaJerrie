@@ -2,12 +2,13 @@
 
 @section('title', 'Edit Enrollment')
 
-@php
-    $pageTitle = 'Edit Enrollment';
-    $pageActions = '<a href="' . route('admin.enrollments.index') . '" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Back to List</a>';
-@endphp
-
 @section('content')
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-edit mr-2"></i>Edit Enrollment</h1>
+    <a href="{{ route('admin.enrollments.index') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left mr-1"></i> Back to List
+    </a>
+</div>
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card shadow mb-4">
@@ -120,12 +121,19 @@
 
                         <div class="form-group">
                             <label for="enrollment_date">Enrollment Date <span class="text-danger">*</span></label>
-                            <input type="date" 
-                                   name="enrollment_date" 
-                                   id="enrollment_date" 
-                                   class="form-control @error('enrollment_date') is-invalid @enderror" 
-                                   value="{{ old('enrollment_date', $enrollment->enrollment_date->format('Y-m-d')) }}" 
-                                   required>
+                            <div class="input-group">
+                                <input type="date" 
+                                       name="enrollment_date" 
+                                       id="enrollment_date" 
+                                       class="form-control @error('enrollment_date') is-invalid @enderror" 
+                                       value="{{ old('enrollment_date', $enrollment->enrollment_date->format('Y-m-d')) }}" 
+                                       required>
+                                <div class="input-group-append">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-calendar-alt"></i>
+                                    </span>
+                                </div>
+                            </div>
                             @error('enrollment_date')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror

@@ -149,4 +149,39 @@ class User extends Authenticatable
         // For now, return true if user is a student
         return $this->role === 'student';
     }
+
+    public function getProfilePictureUrlAttribute()
+    {
+        // Check if user has direct profile picture
+        if ($this->profile_picture) {
+            return asset('storage/' . $this->profile_picture);
+        }
+
+        // Check role-specific profile picture
+        if ($this->isStudent() && $this->student && $this->student->profile_picture) {
+            return asset('storage/' . $this->student->profile_picture);
+        }
+
+        if ($this->isInstructor() && $this->instructor && $this->instructor->profile_picture) {
+            return asset('storage/' . $this->instructor->profile_picture);
+        }
+
+        if ($this->isAdmin() && $this->admin && $this->admin->profile_picture) {
+            return asset('storage/' . $this->admin->profile_picture);
+        }
+
+        // Return default placeholder
+        return asset('img/undraw_profile.svg');
+    }
+
+    /**
+     * Check if user has a profile picture
+     */
+    public function hasProfilePicture()
+    {
+        return $this->profile_picture 
+            || ($this->isStudent() && $this->student && $this->student->profile_picture)
+            || ($this->isInstructor() && $this->instructor && $this->instructor->profile_picture)
+            || ($this->isAdmin() && $this->admin && $this->admin->profile_picture);
+    }
 }

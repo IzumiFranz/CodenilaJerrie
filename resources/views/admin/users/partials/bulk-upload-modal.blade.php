@@ -10,7 +10,11 @@
                 </button>
             </div>
             
-            <form action="{{ route('admin.users.bulk-upload') }}" method="POST" enctype="multipart/form-data" id="bulkUploadForm">
+            <form action="{{ route('admin.users.bulk-upload') }}" 
+                  method="POST" 
+                  enctype="multipart/form-data" 
+                  id="bulkUploadForm"
+                  data-confirm="Are you sure you want to upload this CSV file? This will create multiple user accounts based on the data in the file.">
                 @csrf
                 
                 <div class="modal-body">
@@ -28,14 +32,28 @@
                         </ol>
                     </div>
 
+                    {{-- Display validation errors --}}
+                    @if($errors->has('role') || $errors->has('csv_file'))
+                    <div class="alert alert-danger">
+                        <h6 class="font-weight-bold mb-2">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>Validation Errors
+                        </h6>
+                        <ul class="mb-0 pl-3">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    @endif
+
                     {{-- Role Selection --}}
                     <div class="form-group">
                         <label for="bulk_role">User Role <span class="text-danger">*</span></label>
                         <select name="role" id="bulk_role" class="form-control @error('role') is-invalid @enderror" required>
                             <option value="">-- Select Role --</option>
-                            <option value="admin">Admin</option>
-                            <option value="instructor">Instructor</option>
-                            <option value="student">Student</option>
+                            <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Admin</option>
+                            <option value="instructor" {{ old('role') == 'instructor' ? 'selected' : '' }}>Instructor</option>
+                            <option value="student" {{ old('role') == 'student' ? 'selected' : '' }}>Student</option>
                         </select>
                         @error('role')
                             <div class="invalid-feedback">{{ $message }}</div>
@@ -171,30 +189,37 @@ $(document).ready(function() {
         }
     };
 
-    // Handle role selection
-    $('#bulk_role').on('change', function() {
-        const role = $(this).val();
+    // Handle role selection - prevent form submission
+    $('#bulk_role').on('change', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const role = $(this).val();
+    
+    if (role) {
+        $('#templateSection').slideDown();
+        $('#selectedRole').text(role);
         
-        if (role) {
-            $('#templateSection').slideDown();
-            $('#selectedRole').text(role);
-            
-            // Update download link
-            $('#downloadTemplateBtn').attr('href', "{{ route('admin.users.download-template') }}?role=" + role);
-            
-            // Show required fields
-            const fields = roleFields[role];
-            let fieldsHtml = '<ul class="mb-0">';
-            fieldsHtml += '<li><strong>Required:</strong> ' + fields.required.join(', ') + '</li>';
-            fieldsHtml += '<li><strong>Optional:</strong> ' + fields.optional.join(', ') + '</li>';
-            fieldsHtml += '</ul>';
-            $('#requiredFieldsInfo').html(fieldsHtml);
-        } else {
-            $('#templateSection').slideUp();
-            $('#filePreview').slideUp();
-            $('#submitBulkUpload').prop('disabled', true);
-        }
-    });
+        // Update download link
+        $('#downloadTemplateBtn').attr('href', "{{ route('admin.users.download-template') }}?role=" + role);
+        
+        // Show required fields
+        const fields = roleFields[role];
+        let fieldsHtml = '<ul class="mb-0">';
+        fieldsHtml += '<li><strong>Required:</strong> ' + fields.required.join(', ') + '</li>';
+        fieldsHtml += '<li><strong>Optional:</strong> ' + fields.optional.join(', ') + '</li>';
+        fieldsHtml += '</ul>';
+        $('#requiredFieldsInfo').html(fieldsHtml);
+        
+        $('#submitBulkUpload').prop('disabled', !$('#csv_file')[0].files[0]);
+    } else {
+        $('#templateSection').slideUp();
+        $('#filePreview').slideUp();
+        $('#submitBulkUpload').prop('disabled', true);
+    }
+    
+    return false; // Prevent any default action
+});
 
     // Handle file selection
     $('#csv_file').on('change', function() {
@@ -248,14 +273,14 @@ $(document).ready(function() {
         
         if (!role) {
             e.preventDefault();
-            alert('Please select a user role');
+            alert('Please select a user role first.');
             $('#bulk_role').focus();
             return false;
         }
         
         if (!file) {
             e.preventDefault();
-            alert('Please select a CSV file to upload');
+            alert('Please select a CSV file to upload. Make sure you have downloaded the template and filled it in.');
             $('#csv_file').focus();
             return false;
         }
@@ -263,7 +288,7 @@ $(document).ready(function() {
         // Show loading state
         $('#submitBulkUpload').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i>Uploading...');
         
-        // Form will submit normally
+        // Form will submit normally (global confirmation system will handle confirmation)
         return true;
     });
 
@@ -274,6 +299,16 @@ $(document).ready(function() {
         $('#templateSection').hide();
         $('#filePreview').hide();
         $('#submitBulkUpload').prop('disabled', true).html('<i class="fas fa-upload mr-1"></i>Upload Users');
+        // Clear any validation errors
+        $('.alert-danger').remove();
+    });
+    
+    // Prevent form submission on Enter key in role select
+    $('#bulk_role').on('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            return false;
+        }
     });
 });
 </script>

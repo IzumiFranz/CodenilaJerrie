@@ -8,6 +8,7 @@ use App\Models\QuestionBank;
 use App\Models\Subject;
 use App\Models\InstructorSubjectSection;
 use App\Models\QuizAttempt;
+use App\Models\QuizTemplate;
 use App\Models\AuditLog;
 use App\Mail\QuizPublishedMail;
 use App\Jobs\SendQuizPublishedNotifications;
@@ -72,7 +73,7 @@ class QuizController extends Controller
             $template = QuizTemplate::find($request->get('template'));
         }
 
-        return view('instructor.quizzes.create', compact('subjects', 'selectedSubject'));
+        return view('instructor.quizzes.create', compact('subjects', 'selectedSubject', 'template'));
     }
 
     public function store(Request $request)

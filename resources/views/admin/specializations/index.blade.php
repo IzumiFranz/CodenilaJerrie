@@ -2,19 +2,18 @@
 
 @section('title', 'Specializations Management')
 
-@php
-    $pageTitle = 'Specializations Management';
-    $pageActions = '
-        <a href="' . route('admin.specializations.create') . '" class="btn btn-primary btn-sm mr-2">
-            <i class="fas fa-plus"></i> Add Specialization
-        </a>
-        <a href="' . route('admin.specializations.trashed') . '" class="btn btn-secondary btn-sm">
-            <i class="fas fa-trash"></i> Trash
-        </a>
-    ';
-@endphp
-
 @section('content')
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-certificate mr-2"></i>Specializations Management</h1>
+    <div class="d-flex gap-2">
+        <a href="{{ route('admin.specializations.create') }}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus mr-1"></i> Add Specialization
+        </a>
+        <a href="{{ route('admin.specializations.trashed') }}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-trash mr-1"></i> Trash
+        </a>
+    </div>
+</div>
     <div class="card shadow mb-4">
         <div class="card-header py-3">
             <h6 class="m-0 font-weight-bold text-primary">Search & Filters</h6>

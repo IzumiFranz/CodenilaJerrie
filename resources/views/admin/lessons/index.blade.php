@@ -2,12 +2,13 @@
 
 @section('title', 'Lessons Management')
 
-@php
-    $pageTitle = 'Lessons Management';
-    $pageActions = '<a href="' . route('admin.lessons.index') . '" class="btn btn-secondary btn-sm"><i class="fas fa-sync"></i> Refresh</a>';
-@endphp
-
 @section('content')
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-file-alt mr-2"></i>Lessons Management</h1>
+    <a href="{{ route('admin.lessons.index') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-sync mr-1"></i> Refresh
+    </a>
+</div>
     <div class="card shadow mb-4">
         <div class="card-header py-3">
             <h6 class="m-0 font-weight-bold text-primary">Search & Filters</h6>

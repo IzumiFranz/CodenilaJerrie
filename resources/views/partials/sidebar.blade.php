@@ -196,6 +196,22 @@
             </a>
         </li>
 
+        <hr class="sidebar-divider">
+        <div class="sidebar-heading">System</div>
+
+        <li class="nav-item {{ request()->routeIs('instructor.notifications.*') ? 'active' : '' }}">
+            <a class="nav-link" href="{{ route('instructor.notifications.index') }}">
+                <i class="fas fa-fw fa-bell"></i>
+                <span>Notifications</span>
+                @php
+                    $unreadCount = auth()->user()->notifications()->whereNull('read_at')->count();
+                @endphp
+                @if($unreadCount > 0)
+                    <span class="badge badge-danger badge-counter ml-1">{{ $unreadCount }}</span>
+                @endif
+            </a>
+        </li>
+
         <li class="nav-item {{ request()->routeIs('instructor.settings.*') ? 'active' : '' }}">
             <a class="nav-link" href="{{ route('instructor.settings.index') }}">
                 <i class="fas fa-fw fa-cog"></i>
@@ -248,7 +264,7 @@
                 <i class="fas fa-fw fa-bell"></i>
                 <span>Notifications</span>
                 @php
-                    $unreadCount = auth()->user()->notifications()->where('is_read', false)->count();
+                    $unreadCount = auth()->user()->notifications()->whereNull('read_at')->count();
                 @endphp
                 @if($unreadCount > 0)
                     <span class="badge badge-danger badge-counter ml-1">{{ $unreadCount }}</span>

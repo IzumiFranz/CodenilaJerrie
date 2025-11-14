@@ -2,14 +2,14 @@
 @section('title', 'Quiz Results')
 @section('content')
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-chart-bar mr-2"></i>Quiz Results: {{ $quiz->title }}</h1>
-    <div>
-        <a href="{{ route('instructor.quizzes.show', $quiz) }}" class="btn btn-info">
-            <i class="fas fa-eye"></i> View Quiz
+    <div class="d-flex gap-2">
+        <a href="{{ route('instructor.quizzes.show', $quiz) }}" class="btn btn-info btn-sm">
+            <i class="fas fa-eye mr-1"></i> View Quiz
         </a>
-        <a href="{{ route('instructor.quizzes.index') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Back
+        <a href="{{ route('instructor.quizzes.index') }}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left mr-1"></i> Back
         </a>
     </div>
 </div>

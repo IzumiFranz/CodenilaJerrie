@@ -2,15 +2,15 @@
 @section('title', 'Lesson Details')
 @section('content')
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-book mr-2"></i>Lesson Details</h1>
-    <div>
-        <a href="{{ route('instructor.lessons.edit', $lesson) }}" class="btn btn-warning">
-            <i class="fas fa-edit"></i> Edit
+    <div class="d-flex gap-2">
+        <a href="{{ route('instructor.lessons.edit', $lesson) }}" class="btn btn-warning btn-sm">
+            <i class="fas fa-edit mr-1"></i> Edit
         </a>
         @if($lesson->file_path)
-            <a href="{{ route('instructor.lessons.download', $lesson) }}" class="btn btn-info">
-                <i class="fas fa-download"></i> Download File
+            <a href="{{ route('instructor.lessons.download', $lesson) }}" class="btn btn-info btn-sm">
+                <i class="fas fa-download mr-1"></i> Download File
             </a>
         @endif
         <form action="{{ route('instructor.lessons.toggle-publish', $lesson) }}" method="POST" class="d-inline">

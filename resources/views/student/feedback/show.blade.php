@@ -5,11 +5,11 @@
 @section('content')
 <div class="container-fluid px-4">
     <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-comment-dots mr-2"></i>Feedback Details</h1>
         <a href="{{ route('student.feedback.index') }}" class="btn btn-outline-secondary btn-sm">
-            <i class="fas fa-arrow-left me-1"></i> Back to Feedback List
+            <i class="fas fa-arrow-left mr-1"></i> Back to Feedback List
         </a>
-        <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-comment-dots me-2"></i>Feedback Details</h1>
     </div>
 
     <div class="row">

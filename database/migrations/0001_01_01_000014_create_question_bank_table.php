@@ -16,7 +16,7 @@ return new class extends Migration
             $table->enum('type', ['multiple_choice', 'true_false', 'identification', 'essay'])->default('multiple_choice');
             $table->decimal('points', 5, 2)->default(1.00);
             $table->enum('difficulty', ['easy', 'medium', 'hard'])->default('medium');
-            $table->string('blooms_level')->nullable();
+            $table->string('bloom_level')->nullable();
             $table->text('explanation')->nullable();
             $table->json('tags')->nullable();
             $table->integer('usage_count')->default(0);

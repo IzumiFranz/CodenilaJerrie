@@ -2,12 +2,13 @@
 
 @section('title', 'Create Section')
 
-@php
-    $pageTitle = 'Create New Section';
-    $pageActions = '<a href="' . route('admin.sections.index') . '" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Back to List</a>';
-@endphp
-
 @section('content')
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-chalkboard mr-2"></i>Create New Section</h1>
+    <a href="{{ route('admin.sections.index') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left mr-1"></i> Back to List
+    </a>
+</div>
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card shadow mb-4">

@@ -67,7 +67,14 @@
 
                 <div class="form-group mt-2">
                     <label>Enrollment Date <span class="text-danger">*</span></label>
-                    <input type="date" wire:model="enrollment_date" class="form-control">
+                    <div class="input-group">
+                        <input type="date" wire:model="enrollment_date" class="form-control">
+                        <div class="input-group-append">
+                            <span class="input-group-text">
+                                <i class="fas fa-calendar-alt"></i>
+                            </span>
+                        </div>
+                    </div>
                 </div>
 
                 <button type="submit" class="btn btn-primary mt-3" wire:loading.attr="disabled">

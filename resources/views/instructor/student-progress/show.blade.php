@@ -7,12 +7,12 @@
 
 @section('content')
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">
         <i class="fas fa-user-graduate mr-2"></i>{{ $student->full_name }}
     </h1>
-    <a href="{{ route('instructor.student-progress.index') }}" class="btn btn-secondary">
-        <i class="fas fa-arrow-left"></i> Back
+    <a href="{{ route('instructor.student-progress.index') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left mr-1"></i> Back
     </a>
 </div>
 

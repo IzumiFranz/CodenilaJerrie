@@ -5,10 +5,10 @@
 @section('content')
 <div class="container-fluid py-4">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <div>
             <h2 class="mb-1">
-                <i class="bi bi-paperclip"></i> Manage Attachments
+                <i class="fas fa-paperclip mr-2"></i> Manage Attachments
             </h2>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
@@ -19,8 +19,8 @@
                 </ol>
             </nav>
         </div>
-        <a href="{{ route('instructor.lessons.show', $lesson) }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Lesson
+        <a href="{{ route('instructor.lessons.show', $lesson) }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left mr-1"></i> Back to Lesson
         </a>
     </div>
 

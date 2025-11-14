@@ -142,6 +142,8 @@ Route::middleware(['auth', 'role:admin', 'password.change'])
     Route::resource('enrollments', EnrollmentController::class);
     Route::post('enrollments/bulk-enroll', [EnrollmentController::class, 'bulkEnroll'])
         ->name('enrollments.bulk-enroll');
+    Route::get('enrollments/bulk-enroll/template', [EnrollmentController::class, 'downloadBulkEnrollTemplate'])
+        ->name('enrollments.bulk-enroll.template');
     Route::get('enrollments/{enrollment}/restore', [EnrollmentController::class, 'restore'])
         ->name('enrollments.restore');
     Route::get('enrollments/{enrollment}/force-delete', [EnrollmentController::class, 'forceDelete'])
@@ -163,6 +165,9 @@ Route::middleware(['auth', 'role:admin', 'password.change'])
     
     // Quiz Management (View/Delete only)
     Route::get('quizzes', [AdminQuizController::class, 'index'])->name('quizzes.index');
+    Route::get('quizzes/trashed', [AdminQuizController::class, 'trashed'])->name('quizzes.trashed');
+    Route::post('quizzes/{id}/restore', [AdminQuizController::class, 'restore'])->name('quizzes.restore');
+    Route::delete('quizzes/{id}/force-delete', [AdminQuizController::class, 'forceDelete'])->name('quizzes.force-delete');
     Route::get('quizzes/{quiz}', [AdminQuizController::class, 'show'])->name('quizzes.show');
     Route::delete('quizzes/{quiz}', [AdminQuizController::class, 'destroy'])->name('quizzes.destroy');
     Route::get('quizzes/{quiz}/results', [AdminQuizController::class, 'results'])->name('quizzes.results');
@@ -409,6 +414,18 @@ Route::middleware(['auth', 'role:instructor', 'password.change'])
         ->name('student-progress.alerts');
     Route::post('/student-progress/dismiss-alert', [StudentProgressController::class, 'dismissAlert'])
         ->name('student-progress.dismiss-alert');
+
+    // Notifications
+    Route::get('notifications', [\App\Http\Controllers\Instructor\NotificationController::class, 'index'])
+        ->name('notifications.index');
+    Route::patch('notifications/{notification}/read', [\App\Http\Controllers\Instructor\NotificationController::class, 'markAsRead'])
+        ->name('notifications.mark-read');
+    Route::post('notifications/mark-all-read', [\App\Http\Controllers\Instructor\NotificationController::class, 'markAllAsRead'])
+        ->name('notifications.mark-all-read');
+    Route::delete('notifications/{notification}', [\App\Http\Controllers\Instructor\NotificationController::class, 'destroy'])
+        ->name('notifications.destroy');
+    Route::get('notifications/unread', [\App\Http\Controllers\Instructor\NotificationController::class, 'unread'])
+        ->name('notifications.unread');
 
         // Settings (NEW!)
     Route::get('settings', [\App\Http\Controllers\Instructor\SettingsController::class, 'index'])

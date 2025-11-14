@@ -52,10 +52,42 @@ class AssignmentController extends Controller
         $instructors = Instructor::with('user', 'specialization')
             ->whereHas('user', fn($q) => $q->where('status', 'active'))
             ->get();
-        $courses = Course::where('is_active', true)->get();
+        $courses = Course::with(['sections', 'subjects.specialization'])
+            ->where('is_active', true)
+            ->get();
         $academicYears = $this->getAcademicYears();
 
-        return view('admin.assignments.create', compact('instructors', 'courses', 'academicYears'));
+        // Prepare sections and subjects data for JavaScript
+        $sectionsData = $courses->flatMap(function($course) {
+            return $course->sections->map(function($section) use ($course) {
+                return [
+                    'id' => $section->id,
+                    'course_id' => $course->id,
+                    'course_code' => $course->course_code,
+                    'year_level' => $section->year_level,
+                    'section_name' => $section->section_name,
+                    'full_name' => $section->full_name,
+                    'is_active' => $section->is_active
+                ];
+            });
+        })->values();
+
+        $subjectsData = $courses->flatMap(function($course) {
+            return $course->subjects->map(function($subject) use ($course) {
+                return [
+                    'id' => $subject->id,
+                    'course_id' => $course->id,
+                    'year_level' => $subject->year_level,
+                    'subject_code' => $subject->subject_code,
+                    'subject_name' => $subject->subject_name,
+                    'units' => $subject->units,
+                    'specialization_id' => $subject->specialization_id,
+                    'specialization_name' => $subject->specialization ? $subject->specialization->name : null
+                ];
+            });
+        })->values();
+
+        return view('admin.assignments.create', compact('instructors', 'courses', 'academicYears', 'sectionsData', 'subjectsData'));
     }
 
     public function store(Request $request)

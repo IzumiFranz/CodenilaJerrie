@@ -2,7 +2,7 @@
 @section('title', 'Student Progress')
 @section('content')
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-chart-line mr-2"></i>Student Progress</h1>
 </div>
 

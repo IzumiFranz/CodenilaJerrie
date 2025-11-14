@@ -1,4 +1,4 @@
-@extends('layouts.student')
+@extends('layouts.instructor')
 
 @section('title', 'Notifications')
 
@@ -11,7 +11,7 @@
             <i class="fas fa-bell"></i> Notifications
         </h1>
         <div>
-            <form action="{{ route('student.notifications.mark-all-read') }}" method="POST" class="d-inline" data-confirm="Are you sure you want to mark all notifications as read?">
+            <form action="{{ route('instructor.notifications.mark-all-read') }}" method="POST" class="d-inline" data-confirm="Are you sure you want to mark all notifications as read?">
                 @csrf
                 <button type="submit" class="btn btn-sm btn-info" {{ $unreadCount == 0 ? 'disabled' : '' }}>
                     <i class="fas fa-check-double"></i> Mark All as Read
@@ -23,10 +23,10 @@
     <!-- Filters -->
     <div class="card shadow mb-4">
         <div class="card-body">
-            <form method="GET" action="{{ route('student.notifications.index') }}" class="row g-3">
+            <form method="GET" action="{{ route('instructor.notifications.index') }}" class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label">Type</label>
-                    <select name="type" class="form-select">
+                    <select name="type" class="form-control">
                         <option value="">All Types</option>
                         <option value="info" {{ request('type') == 'info' ? 'selected' : '' }}>Info</option>
                         <option value="success" {{ request('type') == 'success' ? 'selected' : '' }}>Success</option>
@@ -36,7 +36,7 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Status</label>
-                    <select name="status" class="form-select">
+                    <select name="status" class="form-control">
                         <option value="">All</option>
                         <option value="unread" {{ request('status') == 'unread' ? 'selected' : '' }}>Unread</option>
                         <option value="read" {{ request('status') == 'read' ? 'selected' : '' }}>Read</option>
@@ -63,19 +63,19 @@
                                 <div class="flex-grow-1">
                                     <div class="d-flex align-items-center mb-2">
                                         @if($notification->type === 'info')
-                                            <i class="fas fa-info-circle text-info fa-lg me-2"></i>
+                                            <i class="fas fa-info-circle text-info fa-lg mr-2"></i>
                                         @elseif($notification->type === 'success')
-                                            <i class="fas fa-check-circle text-success fa-lg me-2"></i>
+                                            <i class="fas fa-check-circle text-success fa-lg mr-2"></i>
                                         @elseif($notification->type === 'warning')
-                                            <i class="fas fa-exclamation-triangle text-warning fa-lg me-2"></i>
+                                            <i class="fas fa-exclamation-triangle text-warning fa-lg mr-2"></i>
                                         @else
-                                            <i class="fas fa-exclamation-circle text-danger fa-lg me-2"></i>
+                                            <i class="fas fa-exclamation-circle text-danger fa-lg mr-2"></i>
                                         @endif
                                         
                                         <h5 class="mb-0">
                                             {{ $notification->title }}
                                             @if(!$notification->is_read)
-                                                <span class="badge bg-info ms-2">New</span>
+                                                <span class="badge badge-info ml-2">New</span>
                                             @endif
                                         </h5>
                                     </div>
@@ -87,9 +87,9 @@
                                     </small>
                                 </div>
                                 
-                                <div class="ms-3">
+                                <div class="ml-3">
                                     @if($notification->action_url)
-                                        <form action="{{ route('student.notifications.mark-read', $notification) }}" method="POST" class="d-inline">
+                                        <form action="{{ route('instructor.notifications.mark-read', $notification) }}" method="POST" class="d-inline">
                                             @csrf
                                             @method('PATCH')
                                             <button type="submit" class="btn btn-sm btn-info mb-1">
@@ -99,7 +99,7 @@
                                     @endif
                                     
                                     @if(!$notification->is_read)
-                                        <form action="{{ route('student.notifications.mark-read', $notification) }}" method="POST" class="d-inline">
+                                        <form action="{{ route('instructor.notifications.mark-read', $notification) }}" method="POST" class="d-inline">
                                             @csrf
                                             @method('PATCH')
                                             <button type="submit" class="btn btn-sm btn-outline-info mb-1">
@@ -108,7 +108,7 @@
                                         </form>
                                     @endif
                                     
-                                    <form action="{{ route('student.notifications.destroy', $notification) }}" method="POST" class="d-inline" data-confirm="Are you sure you want to delete this notification?">
+                                    <form action="{{ route('instructor.notifications.destroy', $notification) }}" method="POST" class="d-inline" data-confirm="Are you sure you want to delete this notification?">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-outline-danger mb-1" data-action="delete">
@@ -135,3 +135,4 @@
 
 </div>
 @endsection
+

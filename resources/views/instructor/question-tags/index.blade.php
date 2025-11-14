@@ -3,12 +3,12 @@
 @section('title', 'Question Tags')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">
         <i class="fas fa-tags mr-2"></i>Question Tags
     </h1>
-    <a href="{{ route('instructor.question-tags.create') }}" class="btn btn-success">
-        <i class="fas fa-plus"></i> Create Tag
+    <a href="{{ route('instructor.question-tags.create') }}" class="btn btn-success btn-sm">
+        <i class="fas fa-plus mr-1"></i> Create Tag
     </a>
 </div>
 

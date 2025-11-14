@@ -127,13 +127,12 @@ class LessonController extends Controller
                     'student_id' => auth()->user()->student->id,
                 ]);
 
-                $filePath = storage_path('app/' . $attachment->file_path);
-
-                if (!file_exists($filePath)) {
+                // Use Storage to get the file
+                if (!Storage::disk('public')->exists($attachment->file_path)) {
                     return back()->with('error', 'Attachment file not found.');
                 }
 
-                return response()->download($filePath, $attachment->file_name);
+                return Storage::disk('public')->download($attachment->file_path, $attachment->original_filename);
             }
 
             // Otherwise, download the lesson’s main file
@@ -146,15 +145,14 @@ class LessonController extends Controller
                 'student_id' => auth()->user()->student->id,
             ]);
 
-            $filePath = storage_path('app/' . $lesson->file_path);
-
-            if (!file_exists($filePath)) {
+            // Use Storage to get the file path
+            if (!Storage::disk('public')->exists($lesson->file_path)) {
                 return back()->with('error', 'Lesson file not found.');
             }
 
-            $fileName = basename($lesson->file_path);
+            $fileName = $lesson->file_name ?? basename($lesson->file_path);
 
-            return response()->download($filePath, $fileName);
+            return Storage::disk('public')->download($lesson->file_path, $fileName);
         } catch (\Exception $e) {
             return back()->with('error', 'Download failed: ' . $e->getMessage());
         }
@@ -272,13 +270,18 @@ class LessonController extends Controller
         $currentAcademicYear = now()->format('Y') . '-' . (now()->year + 1);
         $currentSemester = $this->getCurrentSemester();
         
-        return $student->enrollments()
+        // Get enrolled section IDs
+        $enrolledSectionIds = $student->enrollments()
             ->where('academic_year', $currentAcademicYear)
             ->where('semester', $currentSemester)
             ->where('status', 'enrolled')
-            ->whereHas('section.assignments', function($q) use ($lesson) {
-                $q->where('subject_id', $lesson->subject_id);
-            })
+            ->pluck('section_id');
+        
+        // Check if any of these sections have this subject assigned
+        return \App\Models\InstructorSubjectSection::whereIn('section_id', $enrolledSectionIds)
+            ->where('subject_id', $lesson->subject_id)
+            ->where('academic_year', $currentAcademicYear)
+            ->where('semester', $currentSemester)
             ->exists();
     }
     /**
@@ -317,7 +320,7 @@ class LessonController extends Controller
             ]);
 
             // Return file download
-            return Storage::download($attachment->file_path, $attachment->original_filename);
+            return Storage::disk('public')->download($attachment->file_path, $attachment->original_filename);
 
         } catch (\Exception $e) {
             return back()->with('error', 'Download failed: ' . $e->getMessage());
@@ -357,7 +360,7 @@ class LessonController extends Controller
             $attachment->recordDownload(auth()->id());
 
             // Return file for viewing
-            return Storage::response($attachment->file_path);
+            return Storage::disk('public')->response($attachment->file_path);
 
         } catch (\Exception $e) {
             return back()->with('error', 'View failed: ' . $e->getMessage());
@@ -397,9 +400,8 @@ class LessonController extends Controller
 
             // Add each attachment to ZIP
             foreach ($attachments as $attachment) {
-                $filePath = storage_path('app/public/' . $attachment->file_path);
-                
-                if (file_exists($filePath)) {
+                if (Storage::disk('public')->exists($attachment->file_path)) {
+                    $filePath = Storage::disk('public')->path($attachment->file_path);
                     $zip->addFile($filePath, $attachment->original_filename);
                     
                     // Record download

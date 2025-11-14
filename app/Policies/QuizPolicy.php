@@ -44,17 +44,24 @@ class QuizPolicy
             }
 
             // Check if student is enrolled in a section that has this subject
-            $enrolledSubjectIds = $user->student
+            $currentAcademicYear = now()->format('Y') . '-' . (now()->year + 1);
+            $month = now()->month;
+            $currentSemester = ($month >= 6 && $month <= 10) ? '1st' : (($month >= 11 || $month <= 3) ? '2nd' : 'summer');
+            
+            // Get enrolled section IDs for current term
+            $enrolledSectionIds = $user->student
                 ->enrollments()
+                ->where('academic_year', $currentAcademicYear)
+                ->where('semester', $currentSemester)
                 ->where('status', 'enrolled')
-                ->with('section.subjects')
-                ->get()
-                ->pluck('section.subjects')
-                ->flatten()
-                ->pluck('id')
-                ->unique();
-
-            return $enrolledSubjectIds->contains($quiz->subject_id);
+                ->pluck('section_id');
+            
+            // Check if any of these sections have this subject assigned for current term
+            return \App\Models\InstructorSubjectSection::whereIn('section_id', $enrolledSectionIds)
+                ->where('subject_id', $quiz->subject_id)
+                ->where('academic_year', $currentAcademicYear)
+                ->where('semester', $currentSemester)
+                ->exists();
         }
 
         return false;
@@ -154,17 +161,26 @@ class QuizPolicy
         }
 
         // Check if student is enrolled in the subject
-        $enrolledSubjectIds = $user->student
+        $currentAcademicYear = now()->format('Y') . '-' . (now()->year + 1);
+        $month = now()->month;
+        $currentSemester = ($month >= 6 && $month <= 10) ? '1st' : (($month >= 11 || $month <= 3) ? '2nd' : 'summer');
+        
+        // Get enrolled section IDs for current term
+        $enrolledSectionIds = $user->student
             ->enrollments()
+            ->where('academic_year', $currentAcademicYear)
+            ->where('semester', $currentSemester)
             ->where('status', 'enrolled')
-            ->with('section.subjects')
-            ->get()
-            ->pluck('section.subjects')
-            ->flatten()
-            ->pluck('id')
-            ->unique();
-
-        if (!$enrolledSubjectIds->contains($quiz->subject_id)) {
+            ->pluck('section_id');
+        
+        // Check if any of these sections have this subject assigned for current term
+        $hasAccess = \App\Models\InstructorSubjectSection::whereIn('section_id', $enrolledSectionIds)
+            ->where('subject_id', $quiz->subject_id)
+            ->where('academic_year', $currentAcademicYear)
+            ->where('semester', $currentSemester)
+            ->exists();
+        
+        if (!$hasAccess) {
             return false;
         }
 

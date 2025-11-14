@@ -11,9 +11,9 @@
             <i class="fas fa-cog"></i> Settings
         </h1>
         <form action="{{ route('student.settings.reset') }}" method="POST" 
-              onsubmit="return confirm('Reset all settings to default?')">
+              data-confirm="Are you sure you want to reset all settings to default? All your current settings will be lost.">
             @csrf
-            <button type="submit" class="btn btn-sm btn-outline-danger">
+            <button type="submit" class="btn btn-sm btn-outline-danger" data-action="reset">
                 <i class="fas fa-redo"></i> Reset to Default
             </button>
         </form>

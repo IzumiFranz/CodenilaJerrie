@@ -32,8 +32,12 @@ class LessonController extends Controller
 
         $lessons = $query->orderBy('created_at', 'desc')->paginate(20);
         $subjects = Subject::where('is_active', true)->get();
+        
+        // Statistics
+        $totalLessons = Lesson::count();
+        $publishedLessons = Lesson::where('is_published', true)->count();
 
-        return view('admin.lessons.index', compact('lessons', 'subjects'));
+        return view('admin.lessons.index', compact('lessons', 'subjects', 'totalLessons', 'publishedLessons'));
     }
 
     public function show(Lesson $lesson)

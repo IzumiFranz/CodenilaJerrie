@@ -2,19 +2,18 @@
 
 @section('title', 'View Specialization')
 
-@php
-    $pageTitle = 'Specialization Details: ' . $specialization->name;
-    $pageActions = '
-        <a href="' . route('admin.specializations.edit', $specialization) . '" class="btn btn-warning btn-sm mr-2">
-            <i class="fas fa-edit"></i> Edit
-        </a>
-        <a href="' . route('admin.specializations.index') . '" class="btn btn-secondary btn-sm">
-            <i class="fas fa-arrow-left"></i> Back
-        </a>
-    ';
-@endphp
-
 @section('content')
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-eye mr-2"></i>Specialization Details: {{ $specialization->name }}</h1>
+    <div class="d-flex gap-2">
+        <a href="{{ route('admin.specializations.edit', $specialization) }}" class="btn btn-warning btn-sm">
+            <i class="fas fa-edit mr-1"></i> Edit
+        </a>
+        <a href="{{ route('admin.specializations.index') }}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left mr-1"></i> Back
+        </a>
+    </div>
+</div>
     <div class="row">
         {{-- Specialization Information --}}
         <div class="col-lg-4 mb-4">

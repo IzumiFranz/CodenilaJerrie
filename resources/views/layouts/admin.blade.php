@@ -316,8 +316,9 @@
             <ul class="navbar-nav ml-auto">
                 <!-- Notifications -->
                 @php
-                    $unreadCount = Auth::check() && Auth::user()->notifications ? Auth::user()->notifications()->where('read_at', false)->count() : 0;
+                    $unreadCount = Auth::check() && Auth::user()->notifications ? Auth::user()->notifications()->whereNull('read_at')->count() : 0;
                 @endphp
+                
                 
                 <li class="nav-item dropdown no-arrow mx-1">
                     <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" data-toggle="dropdown">
@@ -521,5 +522,60 @@
 </script>
 
 @stack('scripts')
+
+<script>
+// Global confirmation dialogs for all action buttons
+$(document).ready(function() {
+    // Handle delete buttons with confirmation
+    $(document).on('click', 'button[data-action="delete"], a[data-action="delete"], form[data-action="delete"] button[type="submit"]', function(e) {
+        if (!confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+
+    // Handle restore buttons with confirmation
+    $(document).on('click', 'button[data-action="restore"], a[data-action="restore"]', function(e) {
+        if (!confirm('Are you sure you want to restore this item?')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+
+    // Handle force delete buttons with confirmation
+    $(document).on('click', 'button[data-action="force-delete"], a[data-action="force-delete"]', function(e) {
+        if (!confirm('Are you sure you want to permanently delete this item? This action cannot be undone.')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+
+    // Handle form submissions with data-confirm attribute
+    $(document).on('submit', 'form[data-confirm]', function(e) {
+        const message = $(this).data('confirm') || 'Are you sure you want to proceed?';
+        if (!confirm(message)) {
+            e.preventDefault();
+            return false;
+        }
+    });
+
+    // Handle buttons with data-confirm attribute
+    $(document).on('click', 'button[data-confirm], a[data-confirm]', function(e) {
+        const message = $(this).data('confirm') || 'Are you sure you want to proceed?';
+        if (!confirm(message)) {
+            e.preventDefault();
+            return false;
+        }
+    });
+
+    // Handle reset buttons
+    $(document).on('click', 'button[data-action="reset"], a[data-action="reset"]', function(e) {
+        if (!confirm('Are you sure you want to reset to default settings? All your current settings will be lost.')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+});
+</script>
 </body>
 </html>

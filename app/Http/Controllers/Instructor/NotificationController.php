@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Student;
+namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -38,7 +38,7 @@ class NotificationController extends Controller
             ->whereNull('read_at')
             ->count();
         
-        return view('student.notifications.index', compact('notifications', 'unreadCount'));
+        return view('instructor.notifications.index', compact('notifications', 'unreadCount'));
     }
     
     /**
@@ -108,3 +108,4 @@ class NotificationController extends Controller
         ]);
     }
 }
+

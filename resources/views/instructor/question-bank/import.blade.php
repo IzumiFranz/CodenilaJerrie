@@ -5,12 +5,12 @@
 @section('content')
 <div class="row">
     <div class="col-lg-8 mx-auto">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
             <h1 class="h3 mb-0 text-gray-800">
                 <i class="fas fa-file-excel mr-2"></i>Import Questions from Excel
             </h1>
-            <a href="{{ route('instructor.question-bank.index') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Question Bank
+            <a href="{{ route('instructor.question-bank.index') }}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-left mr-1"></i> Back to Question Bank
             </a>
         </div>
 
@@ -78,7 +78,9 @@
             <div class="card-body">
                 <form method="POST" 
                       action="{{ route('instructor.question-bank.import.process') }}" 
-                      enctype="multipart/form-data">
+                      enctype="multipart/form-data"
+                      data-confirm="Are you sure you want to import questions? This will create new questions in the selected subject."
+                      id="questionImportForm">
                     @csrf
 
                     {{-- Subject Selection --}}
@@ -145,7 +147,7 @@
                         <a href="{{ route('instructor.question-bank.index') }}" class="btn btn-secondary">
                             <i class="fas fa-times"></i> Cancel
                         </a>
-                        <button type="submit" class="btn btn-success">
+                        <button type="submit" class="btn btn-success" id="importSubmitBtn">
                             <i class="fas fa-upload"></i> Import Questions
                         </button>
                     </div>
@@ -288,7 +290,7 @@ $(document).ready(function() {
         }
         
         // Show loading indicator
-        $(this).find('button[type="submit"]')
+        $('#importSubmitBtn')
             .html('<i class="fas fa-spinner fa-spin"></i> Importing...')
             .prop('disabled', true);
     });

@@ -2,14 +2,13 @@
 
 @section('title', 'Send Notification')
 
-@php
-    $pageTitle = 'Send Notification';
-    $pageActions = '<a href="' . route('admin.notifications.index') . '" class="btn btn-secondary">
-        <i class="fas fa-arrow-left"></i> Back
-    </a>';
-@endphp
-
 @section('content')
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-paper-plane mr-2"></i>Send Notification</h1>
+    <a href="{{ route('admin.notifications.index') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left mr-1"></i> Back
+    </a>
+</div>
 <div class="row">
     <div class="col-lg-8">
         <div class="card shadow mb-4">

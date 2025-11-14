@@ -2,12 +2,12 @@
 @section('title', isset($quiz) ? 'Edit Quiz' : 'Create Quiz')
 @section('content')
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">
         <i class="fas fa-clipboard-list mr-2"></i>{{ isset($quiz) ? 'Edit Quiz' : 'Create Quiz' }}
     </h1>
-    <a href="{{ route('instructor.quizzes.index') }}" class="btn btn-secondary">
-        <i class="fas fa-arrow-left"></i> Back
+    <a href="{{ route('instructor.quizzes.index') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left mr-1"></i> Back
     </a>
 </div>
 
@@ -25,9 +25,6 @@
                     Using template: <strong>{{ $template->name }}</strong>
                 </div>
             @endif
-
-            <input type="number" name="time_limit" value="{{ old('time_limit', $template->time_limit ?? 60) }}">
-            <input type="number" name="passing_score" value="{{ old('passing_score', $template->passing_score ?? 60) }}">
 
             <!-- Basic Information -->
             <h5 class="text-success mb-3"><i class="fas fa-info-circle mr-2"></i>Basic Information</h5>
@@ -70,7 +67,7 @@
                     <div class="form-group">
                         <label>Time Limit (minutes) <span class="text-danger">*</span></label>
                         <input type="number" name="time_limit" class="form-control @error('time_limit') is-invalid @enderror" 
-                               value="{{ old('time_limit', $quiz->time_limit ?? 60) }}" min="1" max="300" required>
+                               value="{{ old('time_limit', $quiz->time_limit ?? (isset($template) ? $template->time_limit : 60)) }}" min="1" max="300" required>
                         <small class="form-text text-muted">1-300 minutes</small>
                         @error('time_limit')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
@@ -79,7 +76,7 @@
                     <div class="form-group">
                         <label>Passing Score (%) <span class="text-danger">*</span></label>
                         <input type="number" name="passing_score" class="form-control @error('passing_score') is-invalid @enderror" 
-                               value="{{ old('passing_score', $quiz->passing_score ?? 60) }}" min="1" max="100" required>
+                               value="{{ old('passing_score', $quiz->passing_score ?? (isset($template) ? $template->passing_score : 60)) }}" min="1" max="100" required>
                         <small class="form-text text-muted">1-100%</small>
                         @error('passing_score')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>

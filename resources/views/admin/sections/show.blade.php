@@ -2,22 +2,21 @@
 
 @section('title', 'View Section')
 
-@php
-    $pageTitle = 'Section Details: ' . $section->full_name;
-    $pageActions = '
-        <a href="' . route('admin.sections.edit', $section) . '" class="btn btn-warning btn-sm mr-2">
-            <i class="fas fa-edit"></i> Edit
-        </a>
-        <a href="' . route('admin.enrollments.create', ['section' => $section->id]) . '" class="btn btn-success btn-sm mr-2">
-            <i class="fas fa-user-plus"></i> Enroll Students
-        </a>
-        <a href="' . route('admin.sections.index') . '" class="btn btn-secondary btn-sm">
-            <i class="fas fa-arrow-left"></i> Back
-        </a>
-    ';
-@endphp
-
 @section('content')
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-eye mr-2"></i>Section Details: {{ $section->full_name }}</h1>
+    <div class="d-flex gap-2">
+        <a href="{{ route('admin.sections.edit', $section) }}" class="btn btn-warning btn-sm">
+            <i class="fas fa-edit mr-1"></i> Edit
+        </a>
+        <a href="{{ route('admin.enrollments.create', ['section' => $section->id]) }}" class="btn btn-success btn-sm">
+            <i class="fas fa-user-plus mr-1"></i> Enroll Students
+        </a>
+        <a href="{{ route('admin.sections.index') }}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left mr-1"></i> Back
+        </a>
+    </div>
+</div>
     <div class="row">
         {{-- Section Information --}}
         <div class="col-lg-4 mb-4">

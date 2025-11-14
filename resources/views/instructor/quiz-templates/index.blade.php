@@ -2,12 +2,12 @@
 @section('title', 'Quiz Templates')
 
 @section('content')
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">
         <i class="fas fa-layer-group mr-2"></i>Quiz Templates
     </h1>
-    <a href="{{ route('instructor.quiz-templates.create') }}" class="btn btn-success">
-        <i class="fas fa-plus"></i> Create Template
+    <a href="{{ route('instructor.quiz-templates.create') }}" class="btn btn-success btn-sm">
+        <i class="fas fa-plus mr-1"></i> Create Template
     </a>
 </div>
 

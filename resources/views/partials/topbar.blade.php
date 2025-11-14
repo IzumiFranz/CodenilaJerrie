@@ -23,7 +23,7 @@ nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top sha
 
         <!-- Notifications Dropdown -->
         @php
-            $unreadCount = auth()->user()->notifications()->where('read_at', false)->count();
+            $unreadCount = auth()->user()->notifications()->whereNull('read_at')->count();
             $recentNotifications = auth()->user()->notifications()
                 ->orderBy('created_at', 'desc')
                 ->limit(5)

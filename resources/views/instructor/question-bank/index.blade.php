@@ -2,13 +2,16 @@
 @section('title', 'Question Bank')
 @section('content')
 
-<div class="btn-group" role="group">
-    <a href="{{ route('instructor.question-bank.create') }}" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Create Question
-    </a>
-    <button type="button" class="btn btn-success" data-toggle="modal" data-target="#aiGenerateModal">
-        <i class="fas fa-robot"></i> Generate with AI
-    </button>
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-question-circle mr-2"></i>Question Bank</h1>
+    <div class="d-flex gap-2">
+        <a href="{{ route('instructor.question-bank.create') }}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus mr-1"></i> Create Question
+        </a>
+        <button type="button" class="btn btn-success btn-sm" data-toggle="modal" data-target="#aiGenerateModal">
+            <i class="fas fa-robot mr-1"></i> Generate with AI
+        </button>
+    </div>
 </div>
 
 {{-- Include the modal at the bottom of the page --}}

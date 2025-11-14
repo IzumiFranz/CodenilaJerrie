@@ -306,7 +306,7 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
-        $user->load(['admin', 'instructor', 'student']);
+        $user->load(['admin', 'instructor', 'student', 'notifications']);
         $courses = Course::where('is_active', true)->get();
         $specializations = Specialization::where('is_active', true)->get();
 
@@ -572,10 +572,17 @@ class UserController extends Controller
      */
     public function bulkUpload(Request $request)
     {
+        // Validate role first (without file requirement) to show helpful message
         $request->validate([
-            'csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'], // 5MB max
             'role' => ['required', 'in:admin,instructor,student'],
+            'csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'], // 5MB max
             'send_email' => ['nullable', 'boolean'],
+        ], [
+            'role.required' => 'Please select a user role first.',
+            'csv_file.required' => 'Please select a CSV file to upload. Make sure you have downloaded the template and filled it in.',
+            'csv_file.file' => 'The uploaded file is not valid.',
+            'csv_file.mimes' => 'The file must be a CSV file (.csv).',
+            'csv_file.max' => 'The file size must not exceed 5MB.',
         ]);
 
         try {
@@ -648,12 +655,12 @@ class UserController extends Controller
             }
 
             DB::commit();
-            
+
+            // Send individual welcome emails
             foreach ($created as $userData) {
                 try {
                     $user = User::where('email', $userData['email'])->first();
-                    if ($user) {
-                        // Queue individual welcome email
+                    if ($user && $sendEmail) {
                         SendWelcomeEmailJob::dispatch($user, $userData['password']);
                     }
                 } catch (\Exception $e) {
@@ -664,59 +671,27 @@ class UserController extends Controller
                     $failed[] = "Email failed for: " . $userData['email'];
                 }
             }
-
-            // Also send summary to admin with CSV attachment
-            SendBulkCreationSummaryJob::dispatch($created, auth()->user()->email);
-
-            AuditLog::log('bulk_users_created', null, [], [
-                'role' => $role,
-                'count' => count($created),
-                'emails_queued' => count($created)
-            ]);
-
-            $message = count($created) . " users created successfully. Welcome emails have been sent to each user.";
-            if (!empty($failed)) {
-                $message .= " " . count($failed) . " emails failed to send.";
-            }
-
-            return back()->with('success', $message);
-
-            // Send bulk email with CSV attachment if requested
+            
+            // Send summary email to admin with CSV attachment
             if ($sendEmail && count($created) > 0) {
-                try {
-                    Mail::to(auth()->user()->email)
-                        ->send(new BulkUsersCreatedMail($created, $role));
-
-                    AuditLog::log('bulk_users_created', null, [], [
-                        'role' => $role,
-                        'count' => count($created),
-                        'email_sent' => true,
-                        'sent_to' => auth()->user()->email
-                    ]);
-
-                    $emailStatus = 'Credentials sent to your email with CSV attachment.';
-                } catch (\Exception $e) {
-                    \Log::error('Failed to send bulk creation email: ' . $e->getMessage());
-                    $emailStatus = 'Users created but email failed. Please export credentials manually.';
-                }
-            } else {
-                AuditLog::log('bulk_users_created', null, [], [
-                    'role' => $role,
-                    'count' => count($created),
-                    'email_sent' => false
-                ]);
-                $emailStatus = 'Email notification disabled.';
+                SendBulkCreationSummaryJob::dispatch($created, auth()->user()->email);
             }
+            
+            // Log the action
             AuditLog::log('bulk_users_created', null, [], [
                 'role' => $role,
                 'count' => count($created),
+                'emails_queued' => $sendEmail ? count($created) : 0
             ]);
-
+            
             $message = count($created) . " users created successfully.";
-            if (!empty($failed)) {
-                $message .= " " . count($failed) . " failed.";
+            if ($sendEmail) {
+                $message .= " Welcome emails have been queued.";
             }
-
+            if (!empty($failed)) {
+                $message .= " " . count($failed) . " rows failed.";
+            }
+            
             return back()->with('success', $message);
 
         } catch (\Exception $e) {

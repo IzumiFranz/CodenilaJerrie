@@ -2,12 +2,13 @@
 
 @section('title', 'Edit Subject')
 
-@php
-    $pageTitle = 'Edit Subject: ' . $subject->subject_name;
-    $pageActions = '<a href="' . route('admin.subjects.index') . '" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Back to List</a>';
-@endphp
-
 @section('content')
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-edit mr-2"></i>Edit Subject: {{ $subject->subject_name }}</h1>
+    <a href="{{ route('admin.subjects.index') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left mr-1"></i> Back to List
+    </a>
+</div>
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card shadow mb-4">

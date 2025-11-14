@@ -165,16 +165,23 @@
                             </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                    <label for="hire_date">Hire Date</label>
+                                <label for="hire_date">Hire Date</label>
+                                <div class="input-group">
                                     <input type="date" name="hire_date" id="hire_date" 
-                                            class="form-control @error('hire_date') is-invalid @enderror" 
-                                            value="{{ old('hire_date', $user->instructor->hire_date ? $user->instructor->hire_date->format('Y-m-d') : '') }}">
-                                    @error('hire_date')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
+                                           class="form-control @error('hire_date') is-invalid @enderror" 
+                                           value="{{ old('hire_date', $user->instructor->hire_date ? $user->instructor->hire_date->format('Y-m-d') : '') }}">
+                                    <div class="input-group-append">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-calendar-alt"></i>
+                                        </span>
+                                    </div>
                                 </div>
+                                @error('hire_date')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
+                    </div>
                     @endif
 <hr>
                     @if($user->isStudent())
@@ -275,7 +282,7 @@
                 @endif
                 
                 <h5>{{ $user->full_name }}</h5>
-                <p class="text-muted">@{{ $user->username }}</p>
+                <p class="text-muted">{{ $user->username }}</p>
                 
                 <div class="mb-3">
                     <span class="badge badge-{{ $user->role === 'admin' ? 'primary' : ($user->role === 'instructor' ? 'success' : 'info') }} mr-2">
@@ -295,6 +302,56 @@
                     <p class="mb-2"><strong>Last Login:</strong> {{ $user->last_login_at->diffForHumans() }}</p>
                     @endif
                 </div>
+            </div>
+        </div>
+
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Notifications</h6>
+            </div>
+            <div class="card-body">
+                @forelse($user->notifications->sortByDesc('created_at')->take(10) as $notification)
+                <div class="mb-3 p-3 {{ $notification->read_at ? 'bg-light' : 'bg-white border-left-primary' }}" style="border-left: 4px solid {{ $notification->type === 'info' ? '#17a2b8' : ($notification->type === 'success' ? '#28a745' : ($notification->type === 'warning' ? '#ffc107' : '#dc3545')) }};">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center mb-1">
+                                @if($notification->type === 'info')
+                                    <i class="fas fa-info-circle text-info mr-2"></i>
+                                @elseif($notification->type === 'success')
+                                    <i class="fas fa-check-circle text-success mr-2"></i>
+                                @elseif($notification->type === 'warning')
+                                    <i class="fas fa-exclamation-triangle text-warning mr-2"></i>
+                                @else
+                                    <i class="fas fa-exclamation-circle text-danger mr-2"></i>
+                                @endif
+                                <h6 class="mb-0" style="font-size: 0.9rem;">{{ $notification->title }}</h6>
+                                @if(!$notification->read_at)
+                                    <span class="badge badge-primary ml-2" style="font-size: 0.7rem;">New</span>
+                                @endif
+                            </div>
+                            <p class="mb-1 text-sm text-muted" style="font-size: 0.85rem;">{{ Str::limit($notification->message, 80) }}</p>
+                            <small class="text-muted" style="font-size: 0.75rem;">
+                                <i class="far fa-clock"></i> {{ $notification->created_at->diffForHumans() }}
+                                @if($notification->read_at)
+                                    | Read {{ $notification->read_at->diffForHumans() }}
+                                @endif
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                @empty
+                <p class="text-center text-muted mb-0 py-3">
+                    <i class="fas fa-bell-slash fa-2x mb-2 d-block"></i>
+                    No notifications
+                </p>
+                @endforelse
+                @if($user->notifications->count() > 10)
+                <div class="text-center mt-3">
+                    <a href="{{ route('admin.notifications.index', ['user_id' => $user->id]) }}" class="btn btn-sm btn-outline-primary">
+                        View All ({{ $user->notifications->count() }})
+                    </a>
+                </div>
+                @endif
             </div>
         </div>
 

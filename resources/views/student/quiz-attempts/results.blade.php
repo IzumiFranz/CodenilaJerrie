@@ -6,10 +6,10 @@
 <div class="container-fluid px-4">
 
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <div>
             <a href="{{ route('student.quizzes.index') }}" class="btn btn-outline-secondary btn-sm mb-2">
-                <i class="fas fa-arrow-left me-1"></i> Back to Quizzes
+                <i class="fas fa-arrow-left mr-1"></i> Back to Quizzes
             </a>
             <h1 class="h3 mb-0">{{ $attempt->quiz->title }} - Results</h1>
         </div>

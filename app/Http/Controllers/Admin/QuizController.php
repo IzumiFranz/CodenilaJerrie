@@ -70,4 +70,54 @@ class QuizController extends Controller
             return back()->with('error', 'Failed to delete quiz: ' . $e->getMessage());
         }
     }
+
+    public function trashed(Request $request)
+    {
+        $query = Quiz::onlyTrashed()->with(['instructor.user', 'subject'])->withCount(['questions', 'attempts']);
+
+        if ($request->filled('search')) {
+            $query->where('title', 'like', "%{$request->search}%");
+        }
+
+        $quizzes = $query->orderBy('deleted_at', 'desc')->paginate(20);
+        $subjects = Subject::where('is_active', true)->get();
+
+        return view('admin.quizzes.trashed', compact('quizzes', 'subjects'));
+    }
+
+    public function restore($id)
+    {
+        try {
+            $quiz = Quiz::onlyTrashed()->findOrFail($id);
+            $quiz->restore();
+
+            AuditLog::log('quiz_restored', $quiz);
+
+            return redirect()
+                ->route('admin.quizzes.trashed')
+                ->with('success', 'Quiz restored successfully.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to restore quiz: ' . $e->getMessage());
+        }
+    }
+
+    public function forceDelete($id)
+    {
+        try {
+            $quiz = Quiz::onlyTrashed()->findOrFail($id);
+            
+            if ($quiz->attempts()->where('status', 'completed')->count() > 0) {
+                return back()->with('error', 'Cannot permanently delete quiz with completed attempts.');
+            }
+
+            AuditLog::log('quiz_force_deleted', $quiz);
+            $quiz->forceDelete();
+
+            return redirect()
+                ->route('admin.quizzes.trashed')
+                ->with('success', 'Quiz permanently deleted.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to delete quiz: ' . $e->getMessage());
+        }
+    }
 }

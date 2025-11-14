@@ -21,16 +21,30 @@
                     </select>
                 </div>
                 <div class="col-md-2 mb-3">
-                    <input type="date" 
-                        wire:model.live="dateFrom" 
-                        class="form-control" 
-                        placeholder="From Date">
+                    <div class="input-group">
+                        <input type="date" 
+                            wire:model.live="dateFrom" 
+                            class="form-control" 
+                            placeholder="From Date">
+                        <div class="input-group-append">
+                            <span class="input-group-text">
+                                <i class="fas fa-calendar-alt"></i>
+                            </span>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-2 mb-3">
-                    <input type="date" 
-                        wire:model.live="dateTo" 
-                        class="form-control" 
-                        placeholder="To Date">
+                    <div class="input-group">
+                        <input type="date" 
+                            wire:model.live="dateTo" 
+                            class="form-control" 
+                            placeholder="To Date">
+                        <div class="input-group-append">
+                            <span class="input-group-text">
+                                <i class="fas fa-calendar-alt"></i>
+                            </span>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-1 mb-3">
                     <button wire:click="$refresh" class="btn btn-secondary btn-block">

@@ -29,6 +29,15 @@ class NotificationController extends Controller
             $query->where('user_id', $request->user_id);
         }
 
+        // Filter by read status
+        if ($request->filled('status')) {
+            if ($request->status === 'unread') {
+                $query->whereNull('read_at');
+            } elseif ($request->status === 'read') {
+                $query->whereNotNull('read_at');
+            }
+        }
+
         $notifications = $query->orderBy('created_at', 'desc')->paginate(20);
         $unreadCount = 0;
         if (auth()->check()) {

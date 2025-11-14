@@ -203,7 +203,10 @@ public function getViewPercentage($sectionId)
 
     public function getFileUrlAttribute(): ?string
     {
-        return $this->file_path ? Storage::url($this->file_path) : null;
+        if (!$this->file_path) {
+            return null;
+        }
+        return Storage::disk('public')->url($this->file_path);
     }
 
     public function hasFile(): bool

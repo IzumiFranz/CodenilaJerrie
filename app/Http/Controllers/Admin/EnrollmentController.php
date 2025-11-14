@@ -61,10 +61,26 @@ class EnrollmentController extends Controller
         $students = Student::with('user', 'course')
             ->whereHas('user', fn($q) => $q->where('status', 'active'))
             ->get();
-        $courses = Course::where('is_active', true)->get();
+        $courses = Course::with('sections')->where('is_active', true)->get();
         $academicYears = $this->getAcademicYears();
 
-        return view('admin.enrollments.create', compact('students', 'courses', 'academicYears'));
+        // Prepare sections data for JavaScript
+        $sectionsData = $courses->flatMap(function($course) {
+            return $course->sections->map(function($section) use ($course) {
+                return [
+                    'id' => $section->id,
+                    'course_id' => $course->id,
+                    'course_code' => $course->course_code,
+                    'year_level' => $section->year_level,
+                    'section_name' => $section->section_name,
+                    'max_students' => $section->max_students,
+                    'full_name' => $section->full_name,
+                    'is_active' => $section->is_active
+                ];
+            });
+        })->values();
+
+        return view('admin.enrollments.create', compact('students', 'courses', 'academicYears', 'sectionsData'));
     }
 
     public function store(Request $request)
@@ -339,6 +355,31 @@ class EnrollmentController extends Controller
             DB::rollBack();
             return back()->with('error', 'Failed to bulk enroll: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Download CSV template for bulk enrollment
+     */
+    public function downloadBulkEnrollTemplate()
+    {
+        $headers = ['student_number', 'section_id'];
+        $filename = "bulk_enrollment_template.csv";
+        
+        $handle = fopen('php://temp', 'w');
+        fputcsv($handle, $headers);
+        
+        // Add sample rows
+        fputcsv($handle, ['2024-001', '1']);
+        fputcsv($handle, ['2024-002', '1']);
+        fputcsv($handle, ['2024-003', '2']);
+        
+        rewind($handle);
+        $csv = stream_get_contents($handle);
+        fclose($handle);
+
+        return response($csv)
+            ->header('Content-Type', 'text/csv')
+            ->header('Content-Disposition', "attachment; filename={$filename}");
     }
 
     private function getAcademicYears(): array

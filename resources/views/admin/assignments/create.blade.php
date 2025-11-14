@@ -2,12 +2,13 @@
 
 @section('title', 'Create Assignment')
 
-@php
-    $pageTitle = 'Create Teaching Assignment';
-    $pageActions = '<a href="' . route('admin.assignments.index') . '" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Back to List</a>';
-@endphp
-
 @section('content')
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-chalkboard-teacher mr-2"></i>Create Teaching Assignment</h1>
+    <a href="{{ route('admin.assignments.index') }}" class="btn btn-secondary btn-sm">
+        <i class="fas fa-arrow-left mr-1"></i> Back to List
+    </a>
+</div>
     <div class="row justify-content-center">
         <div class="col-lg-10">
             <div class="card shadow mb-4">
@@ -181,34 +182,8 @@
 @push('scripts')
 <script>
     $(document).ready(function() {
-        const sections = @json($courses->flatMap(function($course) {
-            return $course->sections->map(function($section) use ($course) {
-                return [
-                    'id' => $section->id,
-                    'course_id' => $course->id,
-                    'course_code' => $course->course_code,
-                    'year_level' => $section->year_level,
-                    'section_name' => $section->section_name,
-                    'full_name' => $section->full_name,
-                    'is_active' => $section->is_active
-                ];
-            });
-        }));
-
-        const subjects = @json($courses->flatMap(function($course) {
-            return $course->subjects->map(function($subject) use ($course) {
-                return [
-                    'id' => $subject->id,
-                    'course_id' => $course->id,
-                    'year_level' => $subject->year_level,
-                    'subject_code' => $subject->subject_code,
-                    'subject_name' => $subject->subject_name,
-                    'units' => $subject->units,
-                    'specialization_id' => $subject->specialization_id,
-                    'specialization_name' => $subject->specialization ? $subject->specialization->name : null
-                ];
-            });
-        }));
+        const sections = @json($sectionsData);
+        const subjects = @json($subjectsData);
 
         // Load sections based on course filter
         function loadSections() {
