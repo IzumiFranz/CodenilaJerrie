@@ -95,7 +95,7 @@ class InstructorDashboardController extends Controller
             ->orderBy('view_count', 'desc')
             ->first();
 
-        // Fix for PostgreSQL: Use subquery instead of HAVING with alias
+        // Fix for PostgreSQL: Use subquery with WHERE instead of HAVING
         $strugglingStudents = Student::whereHas('enrollments', function ($q) use ($assignments) {
                 $q->whereIn('section_id', $assignments->pluck('section_id'));
             })
@@ -107,7 +107,13 @@ class InstructorDashboardController extends Controller
                 AND quiz_attempts.quiz_id IN (' . $quizIds->implode(',') . ')
                 AND quiz_attempts.status = \'completed\'
             ) as avg_score')
-            ->havingRaw('avg_score < 50')
+            ->whereRaw('(
+                SELECT AVG(percentage) 
+                FROM quiz_attempts 
+                WHERE quiz_attempts.student_id = students.id 
+                AND quiz_attempts.quiz_id IN (' . $quizIds->implode(',') . ')
+                AND quiz_attempts.status = \'completed\'
+            ) < 50')
             ->orderByRaw('avg_score ASC')
             ->limit(5)
             ->get();
