@@ -37,6 +37,8 @@ use App\Http\Controllers\Student\SettingController;
 use App\Http\Controllers\Student\ProgressController;
 use App\Http\Controllers\Student\NotificationController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 /*
 |--------------------------------------------------------------------------
@@ -60,6 +62,44 @@ Route::get('/', function () {
 
 // Auth routes (Laravel Breeze)
 require __DIR__.'/auth.php';
+
+// Temporary setup route - REMOVE AFTER FIRST USE
+Route::get('/setup-admin', function () {
+    if (DB::table('users')->where('username', 'admin')->exists()) {
+        return response('Admin user already exists! Username: admin, Password: password', 200);
+    }
+    
+    try {
+        DB::table('users')->insert([
+            'username' => 'admin',
+            'email' => 'admin@lms.edu',
+            'password' => Hash::make('password'),
+            'role' => 'admin',
+            'status' => 'active',
+            'must_change_password' => false,
+            'email_verified_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        
+        DB::table('admins')->insert([
+            'user_id' => DB::getPdo()->lastInsertId(),
+            'first_name' => 'System',
+            'last_name' => 'Administrator',
+            'middle_name' => '',
+            'position' => 'System Administrator',
+            'office' => 'IT Department',
+            'phone' => '',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        
+        return response('SUCCESS: Admin user created!<br>Username: admin<br>Password: password<br><br><a href="/login">Go to Login</a>', 200)
+            ->header('Content-Type', 'text/html');
+    } catch (\Exception $e) {
+        return response('ERROR: ' . $e->getMessage(), 500);
+    }
+})->name('setup-admin');
 
 /*
 |--------------------------------------------------------------------------
