@@ -9,17 +9,20 @@ class AdminSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('admins')->insert([
-            'user_id' => 1,
-            'first_name' => 'Juan',
-            'last_name' => 'Dela Cruz',
-            'middle_name' => 'Santos',
-            'position' => 'System Administrator',
-            'office' => 'IT Department',
-            'phone' => '+639171234567',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        // Only create if admin record doesn't exist for user_id 1
+        if (!DB::table('admins')->where('user_id', 1)->exists()) {
+            DB::table('admins')->insert([
+                'user_id' => 1,
+                'first_name' => 'Juan',
+                'last_name' => 'Dela Cruz',
+                'middle_name' => 'Santos',
+                'position' => 'System Administrator',
+                'office' => 'IT Department',
+                'phone' => '+639171234567',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
     }
 }
 
@@ -36,10 +39,13 @@ class InstructorSeeder extends Seeder
         ];
 
         foreach ($instructors as $instructor) {
-            DB::table('instructors')->insert(array_merge($instructor, [
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]));
+            // Only create if instructor record doesn't exist for this user_id
+            if (!DB::table('instructors')->where('user_id', $instructor['user_id'])->exists()) {
+                DB::table('instructors')->insert(array_merge($instructor, [
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]));
+            }
         }
     }
 }

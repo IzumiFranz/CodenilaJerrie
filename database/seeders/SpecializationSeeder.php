@@ -18,10 +18,13 @@ class SpecializationSeeder extends Seeder
         ];
 
         foreach ($specializations as $spec) {
-            DB::table('specializations')->insert(array_merge($spec, [
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]));
+            // Only create if specialization doesn't exist
+            if (!DB::table('specializations')->where('code', $spec['code'])->exists()) {
+                DB::table('specializations')->insert(array_merge($spec, [
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]));
+            }
         }
     }
 }
@@ -38,10 +41,13 @@ class CourseSeeder extends Seeder
         ];
 
         foreach ($courses as $course) {
-            DB::table('courses')->insert(array_merge($course, [
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]));
+            // Only create if course doesn't exist
+            if (!DB::table('courses')->where('course_code', $course['course_code'])->exists()) {
+                DB::table('courses')->insert(array_merge($course, [
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]));
+            }
         }
     }
 }

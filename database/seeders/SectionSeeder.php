@@ -15,15 +15,21 @@ class SectionSeeder extends Seeder
         foreach ($courses as $courseId) {
             for ($year = 1; $year <= 4; $year++) {
                 foreach ($sections as $section) {
-                    DB::table('sections')->insert([
-                        'course_id' => $courseId,
-                        'section_name' => $section,
-                        'year_level' => $year,
-                        'max_students' => 40,
-                        'is_active' => true,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
+                    // Only create if section doesn't exist
+                    if (!DB::table('sections')->where('course_id', $courseId)
+                        ->where('section_name', $section)
+                        ->where('year_level', $year)
+                        ->exists()) {
+                        DB::table('sections')->insert([
+                            'course_id' => $courseId,
+                            'section_name' => $section,
+                            'year_level' => $year,
+                            'max_students' => 40,
+                            'is_active' => true,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
                 }
             }
         }
@@ -56,11 +62,14 @@ class SubjectSeeder extends Seeder
         ];
 
         foreach ($subjects as $subject) {
-            DB::table('subjects')->insert(array_merge($subject, [
-                'is_active' => true,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]));
+            // Only create if subject doesn't exist
+            if (!DB::table('subjects')->where('subject_code', $subject['subject_code'])->exists()) {
+                DB::table('subjects')->insert(array_merge($subject, [
+                    'is_active' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]));
+            }
         }
     }
 }
