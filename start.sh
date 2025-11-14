@@ -33,18 +33,27 @@ php artisan view:clear 2>/dev/null || true
 
 # Run migrations (with error handling)
 echo "Running database migrations..."
-if php artisan migrate --force 2>&1; then
-    echo "Migrations completed successfully"
-    
-    # Seed database only after successful migrations
-    echo "Seeding database..."
-    php artisan db:seed --class=DatabaseSeeder --force 2>&1 || {
-        echo "Database seeding skipped (may already be seeded)"
-    }
-else
-    echo "WARNING: Migrations failed or already completed"
-    echo "This is normal if migrations have already run"
-fi
+php artisan migrate --force
+
+# Always seed database (will skip if already seeded, but ensures users exist)
+echo "Seeding database..."
+echo "This will create default admin, instructor, and student accounts..."
+php artisan db:seed --class=DatabaseSeeder --force
+
+# Verify admin user exists
+echo "Verifying admin user was created..."
+php -r "
+require 'vendor/autoload.php';
+\$app = require_once 'bootstrap/app.php';
+\$app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
+\$user = DB::table('users')->where('username', 'admin')->first();
+if (\$user) {
+    echo 'SUCCESS: Admin user exists (username: admin, email: ' . \$user->email . ')' . PHP_EOL;
+} else {
+    echo 'WARNING: Admin user not found! Seeding may have failed.' . PHP_EOL;
+    exit(1);
+}
+" || echo "Could not verify admin user (this is OK if migrations haven't run yet)"
 
 # Create storage link (ignore if already exists)
 echo "Creating storage link..."
